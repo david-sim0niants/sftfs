@@ -1,0 +1,13 @@
+set(TARGET_NAME sftfs_src)
+add_library(${TARGET_NAME} INTERFACE)
+target_sources(${TARGET_NAME} INTERFACE core.c logging.c ssh.c ssh_cli.c)
+target_include_directories(${TARGET_NAME} INTERFACE ${ROOT_INCLUDE_DIR})
+target_compile_options(${TARGET_NAME} INTERFACE -Wall -Wextra -Werror=format)
+target_compile_definitions(${TARGET_NAME} INTERFACE -D_FILE_OFFSET_BITS=64)
+target_link_libraries(${TARGET_NAME} INTERFACE -lfuse)
+
+set(TARGET_NAME sftfs_endp)
+add_library(${TARGET_NAME} OBJECT endp/sftp.c)
+target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
+target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Werror=format)
+target_link_libraries(${TARGET_NAME} PRIVATE -lssh)

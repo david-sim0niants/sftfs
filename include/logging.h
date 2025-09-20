@@ -49,3 +49,4 @@ static inline void sftfs_log(sftfs_log_severity_t severity, const char *fmt, ...
 #define sftfs_warn(...)  sftfs_log(SFTFS_WARN,  __VA_ARGS__)
 #define sftfs_error(...) sftfs_log(SFTFS_ERROR, __VA_ARGS__)
 #define sftfs_fatal(...) sftfs_log(SFTFS_FATAL, __VA_ARGS__)
+#define sftfs_print(...) sftfs_log(SFTFS_OFF, __VA_ARGS__)
