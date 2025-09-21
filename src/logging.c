@@ -26,7 +26,10 @@ static const char *uncolored_headings[] = {
     ""
 };
 
-#define TAG "sftfs: "
+void sftfs_set_logger_endpoint(sftfs_logger_endpoint_t endpoint)
+{
+    logger_endpoint = endpoint;
+}
 
 int sftfs_default_logger_endpoint(sftfs_log_severity_t severity, const char *fmt, va_list args)
 {
@@ -34,9 +37,9 @@ int sftfs_default_logger_endpoint(sftfs_log_severity_t severity, const char *fmt
     assert(severity <= SFTFS_OFF);
 
     if (isatty(fileno(stderr)))
-        fprintf(stderr, "%s" TAG, colored_headings[severity]);
+        fprintf(stderr, "%s", colored_headings[severity]);
     else
-        fprintf(stderr, "%s" TAG, uncolored_headings[severity]);
+        fprintf(stderr, "%s", uncolored_headings[severity]);
 
     return vfprintf(stderr, fmt, args);
 }
