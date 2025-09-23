@@ -2,7 +2,6 @@
 #include "logging.h"
 #include "ssh.h"
 
-#include <ctype.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,8 +60,10 @@ static int get_ssh_port(struct args *args)
 {
     config.port = DEFAULT_SSH_PORT;
 
+    int last_valid_optind = optind;
+    opterr = 0;
     int opt;
-    while ((opt = getopt(args->argc, args->argv, "p:")) != -1) {
+    while ((opt = getopt(args->argc, args->argv, "+p:")) != -1) {
         switch (opt) {
             case 'p':
             {
@@ -72,12 +73,13 @@ static int get_ssh_port(struct args *args)
                     return EXIT_FAILURE;
                 }
                 config.port = (unsigned short)port;
+                last_valid_optind = optind;
                 break;
             }
         }
     }
 
-    consume_args(args, optind - 1);
+    consume_args(args, last_valid_optind - 1);
 
     if (config.port == DEFAULT_SSH_PORT) {
         struct servent *se = getservbyname("ssh", "tcp");
@@ -166,10 +168,7 @@ static int prompt_password(char *buffer, size_t buflen)
     snprintf(prompt, sizeof(prompt), "%s@%s's password: ",
             config.user ? config.user : get_current_username(), config.host);
 
-    int rc = ssh_getpass(prompt, buffer, buflen, false, false);
-    if (rc != 0)
-        sftfs_fatal("Password prompt failed\n");
-    return rc;
+    return ssh_getpass(prompt, buffer, buflen, false, false);
 }
 
 _Thread_local static int is_dumpable = 1;
@@ -226,8 +225,26 @@ static int try_authorize_host(ssh_session ssh)
         return EFAULT;
 
     int rc = 0;
-    if (prompt_password(password, MAX_PASSWORD_LEN) == 0 && sftfs_ssh_auth(ssh, password))
-        rc = EAGAIN;
+    rc = prompt_password(password, MAX_PASSWORD_LEN) == 0;
+    if (rc >= 0) {
+        enum ssh_auth_e auth_result = ssh_userauth_password(ssh, NULL, password);
+        switch (auth_result) {
+            case SSH_AUTH_SUCCESS:
+                rc = 0;
+                break;
+            case SSH_AUTH_DENIED:
+                sftfs_print("Permission denied: %s\n", ssh_get_error(ssh));
+                rc = EAGAIN;
+                break;
+            case SSH_AUTH_ERROR:
+            default:
+                sftfs_fatal("Authentication failed: %s\n", ssh_get_error(ssh));
+                rc = -1;
+                break;
+        }
+    } else {
+        sftfs_fatal("Password prompt failed\n");
+    }
 
     delete_password_buffer(password, MAX_PASSWORD_LEN);
 

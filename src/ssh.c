@@ -37,10 +37,7 @@ int sftfs_ssh_connect(struct sftfs_ssh_config *config, ssh_session *session)
 
 int sftfs_ssh_auth(ssh_session ssh, const char *password)
 {
-    int rc = ssh_userauth_password(ssh, NULL, password);
-    if (rc != SSH_AUTH_SUCCESS)
-        sftfs_error("Authentication failed: %s\n", ssh_get_error(ssh));
-    return rc;
+    return ssh_userauth_password(ssh, NULL, password);
 }
 
 void sftfs_ssh_disconnect(ssh_session ssh)
