@@ -7,90 +7,12 @@
 #include <string.h>
 #include <errno.h>
 
-#include <getopt.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
 
-struct sftfs_ssh_config config;
-
-struct args {
-    int argc;
-    char **argv;
-};
-
-static void consume_args(struct args *args, int consume_count)
-{
-    args->argc -= consume_count;
-    args->argv += consume_count;
-}
-
-static char *parse_ssh_target(char *target)
-{
-    while (*target && *target != '@') ++target;
-    if (*target == '\0')
-        return NULL;
-
-    *target = '\0';
-    return target + 1;
-}
-
-static int get_ssh_target(struct args *args)
-{
-    char *target = args->argv[1];
-    config.host = parse_ssh_target(target);
-
-    if (config.host == NULL) {
-        config.host = target;
-        config.user = NULL;
-    } else {
-        config.user = target;
-    }
-
-    consume_args(args, 1);
-
-    return EXIT_SUCCESS;
-}
-
-#define PORT_MAX 65535
-#define DEFAULT_SSH_PORT 22
-
-static int get_ssh_port(struct args *args)
-{
-    config.port = DEFAULT_SSH_PORT;
-
-    int last_valid_optind = optind;
-    opterr = 0;
-    int opt;
-    while ((opt = getopt(args->argc, args->argv, "+p:")) != -1) {
-        switch (opt) {
-            case 'p':
-            {
-                int port = atoi(optarg);
-                if (port < 0 || port > PORT_MAX) {
-                    sftfs_error("Invalid port number: %d\n", port);
-                    return EXIT_FAILURE;
-                }
-                config.port = (unsigned short)port;
-                last_valid_optind = optind;
-                break;
-            }
-        }
-    }
-
-    consume_args(args, last_valid_optind - 1);
-
-    if (config.port == DEFAULT_SSH_PORT) {
-        struct servent *se = getservbyname("ssh", "tcp");
-        if (se)
-            config.port = ntohs(se->s_port);
-    }
-
-    return EXIT_SUCCESS;
-}
-
-int get_line(char *buffer, size_t size)
+static int get_line(char *buffer, size_t size)
 {
     if (NULL == fgets(buffer, size, stdin))
         return EOF;
@@ -110,13 +32,13 @@ int get_line(char *buffer, size_t size)
     return len;
 }
 
-static int handle_host_verification(ssh_session ssh)
+static int handle_host_verification(struct sftfs_ssh_config *config, ssh_session ssh)
 {
     if (ssh_session_is_known_server(ssh))
         return EXIT_SUCCESS;
 
     sftfs_print("The authenticity of host '%s' can't be established.\n"
-                "Are you sure you want to continue connecting (yes/no)? ", config.host);
+                "Are you sure you want to continue connecting (yes/no)? ", config->host);
 
     char response[4];
     bool is_yes = false, is_no = false;
@@ -162,11 +84,11 @@ const char *get_current_username(void)
     return user;
 }
 
-static int prompt_password(char *buffer, size_t buflen)
+static int prompt_password(struct sftfs_ssh_config *config, char *buffer, size_t buflen)
 {
     char prompt[4096];
     snprintf(prompt, sizeof(prompt), "%s@%s's password: ",
-            config.user ? config.user : get_current_username(), config.host);
+            config->user ? config->user : get_current_username(), config->host);
 
     return ssh_getpass(prompt, buffer, buflen, false, false);
 }
@@ -218,14 +140,14 @@ static void delete_password_buffer(char *password, size_t size)
 
 #define MAX_PASSWORD_LEN 4096
 
-static int try_authorize_host(ssh_session ssh)
+static int try_authorize_host(struct sftfs_ssh_config *config, ssh_session ssh)
 {
     char *password = create_password_buffer(MAX_PASSWORD_LEN);
     if (! password)
         return EFAULT;
 
     int rc = 0;
-    rc = prompt_password(password, MAX_PASSWORD_LEN) == 0;
+    rc = prompt_password(config, password, MAX_PASSWORD_LEN) == 0;
     if (rc >= 0) {
         enum ssh_auth_e auth_result = ssh_userauth_password(ssh, NULL, password);
         switch (auth_result) {
@@ -251,56 +173,39 @@ static int try_authorize_host(ssh_session ssh)
     return rc;
 }
 
-static int handle_host_authorization(ssh_session ssh)
+static int handle_host_authorization(struct sftfs_ssh_config *config, ssh_session ssh)
 {
 #define PASSWORD_ATTEMPTS 3
     for (int i = 0; i < PASSWORD_ATTEMPTS; ++i)
-        if (try_authorize_host(ssh) == SSH_OK)
+        if (try_authorize_host(config, ssh) == SSH_OK)
             return 0;
     return -1;
 }
 
-static int handle_connection(ssh_session *ssh)
+static ssh_session handle_connection(struct sftfs_ssh_config *config)
 {
-    if (sftfs_ssh_connect(&config, ssh) != SSH_OK)
-        return EXIT_FAILURE;
+    ssh_session ssh;
+    if (sftfs_ssh_connect(config, &ssh) != SSH_OK)
+        return NULL;
 
     int rc;
-    (void)( ! (rc = handle_host_verification(*ssh)) &&
-            ! (rc = handle_host_authorization(*ssh)));
+    (void)( ! (rc = handle_host_verification(config, ssh)) &&
+            ! (rc = handle_host_authorization(config, ssh)));
 
     if (rc != 0) {
-        sftfs_ssh_disconnect(*ssh);
-        *ssh = NULL;
+        sftfs_ssh_disconnect(ssh);
+        return NULL;
     }
 
-    return rc;
+    return ssh;
 }
 
-int sftfs_ssh_cli(int *argc_p, char ***argv_p, ssh_session *ssh)
+ssh_session sftfs_ssh_cli(const char *user, const char *host, int port)
 {
-    struct args args = {
-        .argc = *argc_p,
-        .argv = *argv_p,
+    struct sftfs_ssh_config config = {
+        .user = user,
+        .host = host,
+        .port = port,
     };
-    *ssh = NULL;
-
-    char *cmd = args.argv[0];
-
-    if (args.argc < 2) {
-        sftfs_error("Required arguments not passed\n");
-        return EXIT_FAILURE;
-    }
-
-    int rc;
-    bool arg_parsing_succeeded = (! (rc = get_ssh_target(&args)) && !(rc = get_ssh_port(&args)));
-    args.argv[0] = cmd;
-
-    if (arg_parsing_succeeded)
-        rc = handle_connection(ssh);
-
-    *argc_p = args.argc;
-    *argv_p = args.argv;
-
-    return rc;
+    return handle_connection(&config);
 }

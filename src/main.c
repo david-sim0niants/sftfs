@@ -1,5 +1,7 @@
 #include "core.h"
 #include "logging.h"
+#include "ssh.h"
+#include "ssh_cli.h"
 
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
@@ -99,11 +101,38 @@ struct sftfs {
     sftp_session sftp;
 } sftfs;
 
+static int init_sftp(sftp_session *session, ssh_session ssh)
+{
+    *session = NULL;
+    sftp_session sftp = sftp_new(ssh);
+    if (NULL == sftp) {
+        sftfs_fatal("Failed allocating SFTP session: %s\n", ssh_get_error(ssh));
+        return EXIT_FAILURE;
+    }
+
+    if (sftp_init(sftp) != SSH_OK) {
+        sftfs_fatal("Failed initializing SFTP session: [ %d ]\n", sftp_get_error(sftp));
+        sftp_free(sftp);
+        return EXIT_FAILURE;
+    }
+
+    *session = sftp;
+
+    return EXIT_SUCCESS;
+}
+
+static void deinit_sftp_and_ssh(void)
+{
+    sftp_free(sftfs.sftp);
+    sftfs.sftp = NULL;
+    sftfs_ssh_disconnect(sftfs.ssh);
+    sftfs.ssh = NULL;
+}
+
 static void destroy(void *private_data)
 {
     (void)private_data;
-    sftp_free(sftfs.sftp);
-    ssh_free(sftfs.ssh);
+    deinit_sftp_and_ssh();
 }
 
 static struct fuse_operations ops = {
@@ -128,5 +157,13 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
-    return fuse_main(args.argc, args.argv, &ops, NULL);
+    sftfs.ssh = sftfs_ssh_cli(opts.user, opts.host, opts.port);
+    if (! sftfs.ssh)
+        return EXIT_FAILURE;
+
+    int rc = init_sftp(&sftfs.sftp, sftfs.ssh);
+    if (rc != EXIT_SUCCESS)
+        deinit_sftp_and_ssh();
+
+    return fuse_main(args.argc, args.argv, &ops, sftfs.sftp);
 }
