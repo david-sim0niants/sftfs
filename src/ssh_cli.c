@@ -97,13 +97,11 @@ _Thread_local static int is_dumpable = 1;
 
 static char *create_password_buffer(size_t size)
 {
-    char *password = malloc(size);
+    char *password = calloc(size, 1);
     if (! password) {
         sftfs_fatal("Failed allocating memory to store password\n");
         return NULL;
     }
-
-    memset(password, 0, size);
 
     if (mlock(password, size) != 0) {
         sftfs_fatal("mlock() failed: %s\n", strerror(errno));
@@ -111,6 +109,7 @@ static char *create_password_buffer(size_t size)
         return NULL;
     }
 
+    // TODO: disable ptrace, signal handling, etc.
     if ((is_dumpable = prctl(PR_GET_DUMPABLE)) == -1 || prctl(PR_SET_DUMPABLE, 0) != 0) {
         if (is_dumpable == -1) {
             sftfs_fatal("prctl(PR_GET_DUMPABLE) failed: %s\n", strerror(errno));
@@ -128,7 +127,7 @@ static char *create_password_buffer(size_t size)
 
 static void delete_password_buffer(char *password, size_t size)
 {
-    memset(password, 0, size);
+    explicit_bzero(password, size);
     if (munlock(password, size))
         sftfs_warn("Could not unlock password memory: munlock() failed: %s", strerror(errno));
     if (prctl(PR_SET_DUMPABLE, is_dumpable))

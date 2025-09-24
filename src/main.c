@@ -157,6 +157,11 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
+    if (NULL == opts.host) {
+        sftfs_print("Missing host, see `%s -h`\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
     sftfs.ssh = sftfs_ssh_cli(opts.user, opts.host, opts.port);
     if (! sftfs.ssh)
         return EXIT_FAILURE;
