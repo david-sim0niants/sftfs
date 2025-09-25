@@ -136,6 +136,7 @@ static void destroy(void *private_data)
 
 static struct fuse_operations ops = {
     .getattr = sftfs_getattr,
+    .readlink = sftfs_readlink,
     .destroy = destroy,
 };
 

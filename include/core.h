@@ -6,3 +6,4 @@
 #include <fuse3/fuse.h>
 
 int sftfs_getattr(const char *path, struct stat *stat, struct fuse_file_info *fi);
+int sftfs_readlink(const char *, char *, size_t);
