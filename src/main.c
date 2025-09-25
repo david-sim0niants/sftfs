@@ -25,7 +25,6 @@ struct sftfs_options {
 enum {
     KEY_PORT,
     KEY_HELP,
-    KEY_NONOPT,
 };
 
 static struct fuse_opt opt_specs[] = {

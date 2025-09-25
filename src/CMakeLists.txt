@@ -1,6 +1,6 @@
 set(TARGET_NAME sftfs_src)
 add_library(${TARGET_NAME} INTERFACE)
-target_sources(${TARGET_NAME} INTERFACE core.c logging.c ssh.c ssh_cli.c)
+target_sources(${TARGET_NAME} INTERFACE core.c logging.c ssh.c ssh_cli.c password_prompt.c)
 target_include_directories(${TARGET_NAME} INTERFACE ${ROOT_INCLUDE_DIR})
 target_compile_options(${TARGET_NAME} INTERFACE -Wall -Wextra -Werror=format)
 target_compile_definitions(${TARGET_NAME} INTERFACE -D_FILE_OFFSET_BITS=64)

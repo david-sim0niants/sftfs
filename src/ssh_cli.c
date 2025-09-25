@@ -1,16 +1,14 @@
 #include "ssh_cli.h"
-#include "logging.h"
 #include "ssh.h"
+#include "logging.h"
+#include "password_prompt.h"
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
+#include <errno.h>
 #include <unistd.h>
 #include <pwd.h>
-#include <sys/mman.h>
-#include <sys/prctl.h>
 
 static int get_line(char *buffer, size_t size)
 {
@@ -84,99 +82,49 @@ const char *get_current_username(void)
     return user;
 }
 
-static int prompt_password(struct sftfs_ssh_config *config, char *buffer, size_t buflen)
+#define PROMPT_TEXT_MAXLEN 4096
+static inline void sprint_prompt_text(char prompt_text[], const char *user, const char *host)
 {
-    char prompt[4096];
-    snprintf(prompt, sizeof(prompt), "%s@%s's password: ",
-            config->user ? config->user : get_current_username(), config->host);
-
-    return ssh_getpass(prompt, buffer, buflen, false, false);
+    snprintf(prompt_text, PROMPT_TEXT_MAXLEN,
+             "%s@%s's password: ", user ? user : get_current_username(), host);
 }
 
-_Thread_local static int is_dumpable = 1;
-
-static char *create_password_buffer(size_t size)
+static int password_prompt_cb(const char *password, void *user_data)
 {
-    char *password = calloc(size, 1);
-    if (! password) {
-        sftfs_fatal("Failed allocating memory to store password\n");
-        return NULL;
+    ssh_session ssh = user_data;
+    enum ssh_auth_e auth_result = ssh_userauth_password(ssh, NULL, password);
+    switch (auth_result) {
+        case SSH_AUTH_SUCCESS:
+            return 0;
+        case SSH_AUTH_DENIED:
+            sftfs_print("Permission denied: %s\n", ssh_get_error(ssh));
+            return EAGAIN;
+        case SSH_AUTH_ERROR:
+        default:
+            sftfs_fatal("Authentication failed: %s\n", ssh_get_error(ssh));
+            return -1;
     }
-
-    if (mlock(password, size) != 0) {
-        sftfs_fatal("mlock() failed: %s\n", strerror(errno));
-        free(password);
-        return NULL;
-    }
-
-    // TODO: disable ptrace, signal handling, etc.
-    if ((is_dumpable = prctl(PR_GET_DUMPABLE)) == -1 || prctl(PR_SET_DUMPABLE, 0) != 0) {
-        if (is_dumpable == -1) {
-            sftfs_fatal("prctl(PR_GET_DUMPABLE) failed: %s\n", strerror(errno));
-            is_dumpable = 1;
-        } else {
-            sftfs_fatal("prctl(PR_SET_DUMPABLE, ...) failed: %s\n", strerror(errno));
-        }
-        munlock(password, size);
-        free(password);
-        return NULL;
-    }
-
-    return password;
 }
 
-static void delete_password_buffer(char *password, size_t size)
+static int try_authorize_host_with_password(struct sftfs_ssh_config *config, ssh_session ssh)
 {
-    explicit_bzero(password, size);
-    if (munlock(password, size))
-        sftfs_warn("Could not unlock password memory: munlock() failed: %s", strerror(errno));
-    if (prctl(PR_SET_DUMPABLE, is_dumpable))
-        sftfs_warn(
-                "Could not reset PR_SET_DUMPABLE to its initial value: prctl(PR_SET_DUMPABLE) failed: %s",
-                strerror(errno));
-    free(password);
-}
+    char prompt_text[4096];
+    sprint_prompt_text(prompt_text, config->user, config->host);
 
 #define MAX_PASSWORD_LEN 4096
+    struct sftfs_password_prompt_config prompt_config = {
+        .buffer_size = MAX_PASSWORD_LEN,
+        .flags = 0,
+    };
 
-static int try_authorize_host(struct sftfs_ssh_config *config, ssh_session ssh)
-{
-    char *password = create_password_buffer(MAX_PASSWORD_LEN);
-    if (! password)
-        return EFAULT;
-
-    int rc = 0;
-    rc = prompt_password(config, password, MAX_PASSWORD_LEN) == 0;
-    if (rc >= 0) {
-        enum ssh_auth_e auth_result = ssh_userauth_password(ssh, NULL, password);
-        switch (auth_result) {
-            case SSH_AUTH_SUCCESS:
-                rc = 0;
-                break;
-            case SSH_AUTH_DENIED:
-                sftfs_print("Permission denied: %s\n", ssh_get_error(ssh));
-                rc = EAGAIN;
-                break;
-            case SSH_AUTH_ERROR:
-            default:
-                sftfs_fatal("Authentication failed: %s\n", ssh_get_error(ssh));
-                rc = -1;
-                break;
-        }
-    } else {
-        sftfs_fatal("Password prompt failed\n");
-    }
-
-    delete_password_buffer(password, MAX_PASSWORD_LEN);
-
-    return rc;
+    return sftfs_password_prompt_wrap_critical_call(&prompt_config, prompt_text, password_prompt_cb, ssh);
 }
 
 static int handle_host_authorization(struct sftfs_ssh_config *config, ssh_session ssh)
 {
 #define PASSWORD_ATTEMPTS 3
     for (int i = 0; i < PASSWORD_ATTEMPTS; ++i)
-        if (try_authorize_host(config, ssh) == SSH_OK)
+        if (try_authorize_host_with_password(config, ssh) == SSH_OK)
             return 0;
     return -1;
 }
