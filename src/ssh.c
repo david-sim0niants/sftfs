@@ -35,11 +35,6 @@ int sftfs_ssh_connect(struct sftfs_ssh_config *config, ssh_session *session)
     return 0;
 }
 
-int sftfs_ssh_auth(ssh_session ssh, const char *password)
-{
-    return ssh_userauth_password(ssh, NULL, password);
-}
-
 void sftfs_ssh_disconnect(ssh_session ssh)
 {
     ssh_disconnect(ssh);

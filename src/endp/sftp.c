@@ -10,7 +10,17 @@ static inline sftp_session get_sftp(sftfs_endp endp)
     return (sftp_session)endp;
 }
 
-static int sftp_error_to_errno(int err)
+static inline sftp_dir from_endp_dir(sftfs_endp_dir dir)
+{
+    return (sftp_dir)dir;
+}
+
+static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)
+{
+    return (sftfs_endp_dir)dir;
+}
+
+static int to_errno(int err)
 {
     switch (err) {
         case SSH_FX_OK:
@@ -65,9 +75,11 @@ int sftfs_endp_getattr(sftfs_endp endp, const char *path, struct stat *stat)
     sftp_attributes attr = sftp_stat(sftp, path);
 
     if (NULL == attr)
-        return -sftp_error_to_errno(sftp_get_error(sftp));
+        return -to_errno(sftp_get_error(sftp));
 
     convert_sftp_attr_to_stat(attr, stat);
+    sftp_attributes_free(attr);
+
     return 0;
 }
 
@@ -88,4 +100,48 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
     ssh_string_free_char(target);
 
     return 0;
+}
+
+int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
+{
+    sftp_session sftp = get_sftp(endp);
+    *dir = to_endp_dir(sftp_opendir(sftp, path));
+    if (dir)
+        return 0;
+    else
+        return -to_errno(sftp_get_error(sftp));
+}
+
+int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
+        sftfs_endp_readdir_callee callee, void *user_data)
+{
+    sftp_session sftp = get_sftp(endp);
+
+    sftp_attributes attr = NULL;
+
+    while (NULL != (attr = sftp_readdir(sftp, from_endp_dir(dir)))) {
+        struct sftfs_endp_direntry dentry = {
+            .name = attr->name,
+        };
+
+        if (flags & SFTFS_ENDP_READDIR_PLUS)
+            convert_sftp_attr_to_stat(attr, &dentry.stat);
+
+        int should_stop = callee(&dentry, user_data);
+        sftp_attributes_free(attr);
+
+        if (should_stop)
+            return 0;
+    }
+
+    if (sftp_dir_eof(from_endp_dir(dir)))
+        return 0;
+    else
+        return -to_errno(sftp_get_error(sftp));
+}
+
+int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir)
+{
+    (void)endp;
+    return sftp_closedir(from_endp_dir(dir)) == 0 ? 0 : EIO;
 }
