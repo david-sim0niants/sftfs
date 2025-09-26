@@ -1,5 +1,6 @@
 #include "core.h"
 #include "endp.h"
+#include "func_trace.h"
 
 #include <errno.h>
 
@@ -10,18 +11,21 @@ static inline sftfs_endp get_endp()
 
 int sftfs_getattr(const char *path, struct stat *stat, struct fuse_file_info *fi)
 {
+    SFTFS_TRACE_FUNC
     (void)fi;
     return sftfs_endp_getattr(get_endp(), path, stat);
 }
 
 int sftfs_readlink(const char *path, char *buf, size_t bufsiz)
 {
+    SFTFS_TRACE_FUNC
     assert(bufsiz > 0);
     return sftfs_endp_readlink(get_endp(), path, buf, bufsiz);
 }
 
 int sftfs_opendir(const char *path, struct fuse_file_info *fi)
 {
+    SFTFS_TRACE_FUNC
     sftfs_endp_dir dir;
     int e = sftfs_endp_opendir(get_endp(), path, &dir);
     fi->fh = dir;
@@ -36,6 +40,7 @@ struct readdir_callee_data {
 
 static int readdir_callee(struct sftfs_endp_direntry *direntry, void *user_data)
 {
+    SFTFS_TRACE_FUNC
     struct readdir_callee_data *data = user_data;
     data->rc = data->fill_dir(data->buf, direntry->name, &direntry->stat, 0, 0);
     if (data->rc != 0)
@@ -46,6 +51,7 @@ static int readdir_callee(struct sftfs_endp_direntry *direntry, void *user_data)
 int sftfs_readdir(const char *path, void *buf, fuse_fill_dir_t fill_dir, off_t off,
         struct fuse_file_info *fi, enum fuse_readdir_flags flags)
 {
+    SFTFS_TRACE_FUNC
     (void)path; (void)off;
 
     struct readdir_callee_data data = {
@@ -67,6 +73,7 @@ int sftfs_readdir(const char *path, void *buf, fuse_fill_dir_t fill_dir, off_t o
 
 int sftfs_releasedir(const char *path, struct fuse_file_info *fi)
 {
+    SFTFS_TRACE_FUNC
     (void)path;
     return sftfs_endp_closedir(get_endp(), (sftfs_endp_dir)fi->fh);
 }

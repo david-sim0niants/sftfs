@@ -1,5 +1,7 @@
 #include "endp.h"
 
+#include "func_trace.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <libssh/sftp.h>
@@ -7,21 +9,25 @@
 
 static inline sftp_session get_sftp(sftfs_endp endp)
 {
+    SFTFS_TRACE_FUNC
     return (sftp_session)endp;
 }
 
 static inline sftp_dir from_endp_dir(sftfs_endp_dir dir)
 {
+    SFTFS_TRACE_FUNC
     return (sftp_dir)dir;
 }
 
 static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)
 {
+    SFTFS_TRACE_FUNC
     return (sftfs_endp_dir)dir;
 }
 
 static int to_errno(int err)
 {
+    SFTFS_TRACE_FUNC
     switch (err) {
         case SSH_FX_OK:
             return 0;
@@ -55,6 +61,7 @@ static int to_errno(int err)
 
 static void convert_sftp_attr_to_stat(sftp_attributes attr, struct stat *stat)
 {
+    SFTFS_TRACE_FUNC
     stat->st_mode = attr->permissions;
     stat->st_size = attr->size;
     stat->st_uid = attr->uid;
@@ -71,6 +78,7 @@ static void convert_sftp_attr_to_stat(sftp_attributes attr, struct stat *stat)
 
 int sftfs_endp_getattr(sftfs_endp endp, const char *path, struct stat *stat)
 {
+    SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
     sftp_attributes attr = sftp_stat(sftp, path);
 
@@ -85,6 +93,7 @@ int sftfs_endp_getattr(sftfs_endp endp, const char *path, struct stat *stat)
 
 int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t bufsiz)
 {
+    SFTFS_TRACE_FUNC
     assert(bufsiz > 0);
 
     sftp_session sftp = get_sftp(endp);
@@ -104,9 +113,10 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
 
 int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 {
+    SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
     *dir = to_endp_dir(sftp_opendir(sftp, path));
-    if (dir)
+    if (*dir)
         return 0;
     else
         return -to_errno(sftp_get_error(sftp));
@@ -115,6 +125,7 @@ int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
         sftfs_endp_readdir_callee callee, void *user_data)
 {
+    SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
 
     sftp_attributes attr = NULL;
@@ -142,6 +153,7 @@ int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
 
 int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir)
 {
+    SFTFS_TRACE_FUNC
     (void)endp;
-    return sftp_closedir(from_endp_dir(dir)) == 0 ? 0 : EIO;
+    return sftp_closedir(from_endp_dir(dir)) == 0 ? 0 : -EIO;
 }

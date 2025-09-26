@@ -10,4 +10,4 @@ add_subdirectory(src)
 
 set(TARGET_NAME sftfs)
 add_executable(${TARGET_NAME} src/main.c)
-target_link_libraries(${TARGET_NAME} PRIVATE sftfs_src sftfs_endp)
+target_link_libraries(${TARGET_NAME} PRIVATE sftfs_core sftfs_common sftfs_endp sftfs_ssh)
