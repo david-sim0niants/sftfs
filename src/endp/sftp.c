@@ -13,18 +13,6 @@ static inline sftp_session get_sftp(sftfs_endp endp)
     return (sftp_session)endp;
 }
 
-static inline sftp_dir from_endp_dir(sftfs_endp_dir dir)
-{
-    SFTFS_TRACE_FUNC
-    return (sftp_dir)dir;
-}
-
-static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)
-{
-    SFTFS_TRACE_FUNC
-    return (sftfs_endp_dir)dir;
-}
-
 static int to_errno(int err)
 {
     SFTFS_TRACE_FUNC
@@ -76,14 +64,26 @@ static void convert_sftp_attr_to_stat(sftp_attributes attr, struct stat *stat)
     stat->st_ctim.tv_nsec = stat->st_mtim.tv_nsec;
 }
 
-int sftfs_endp_getattr(sftfs_endp endp, const char *path, struct stat *stat)
+static inline sftfs_endp_file to_endp_file(sftp_file file)
+{
+    sftfs_endp_file endp_file = { .handle = (uintptr_t)file, };
+    return endp_file;
+}
+static inline sftp_file from_endp_file(sftfs_endp_file file)
+{
+    return (sftp_file)file.handle;
+}
+
+int sftfs_endp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, struct stat *stat)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
-    sftp_attributes attr = sftp_stat(sftp, path);
+
+    sftp_attributes attr = file.handle ? sftp_fstat(from_endp_file(file)) : sftp_lstat(sftp, path);
 
     if (NULL == attr)
-        return -to_errno(sftp_get_error(sftp));
+        if (NULL == (attr = sftp_stat(sftp, path)))
+            return -to_errno(sftp_get_error(sftp));
 
     convert_sftp_attr_to_stat(attr, stat);
     sftp_attributes_free(attr);
@@ -111,18 +111,33 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
     return 0;
 }
 
+static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_endp_dir endp_dir = { .handle = (uintptr_t)dir };
+    return endp_dir;
+}
+
+static inline sftp_dir from_endp_dir(sftfs_endp_dir dir)
+{
+    SFTFS_TRACE_FUNC
+    return (sftp_dir)dir.handle;
+}
+
 int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
-    *dir = to_endp_dir(sftp_opendir(sftp, path));
-    if (*dir)
-        return 0;
-    else
+
+    sftp_dir sftp_dir = sftp_opendir(sftp, path);
+    if (NULL == sftp_dir)
         return -to_errno(sftp_get_error(sftp));
+
+    *dir = to_endp_dir(sftp_dir);
+    return 0;
 }
 
-int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
+int sftfs_endp_readdir(sftfs_endp endp, const sftfs_endp_dir dir, int flags,
         sftfs_endp_readdir_callee callee, void *user_data)
 {
     SFTFS_TRACE_FUNC
@@ -156,4 +171,24 @@ int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir)
     SFTFS_TRACE_FUNC
     (void)endp;
     return sftp_closedir(from_endp_dir(dir)) == 0 ? 0 : -EIO;
+}
+
+int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, int access_flags)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    sftp_file sftp_file = sftp_open(sftp, path, access_flags, 0);
+    if (NULL == sftp_file)
+        return -to_errno(sftp_get_error(sftp));
+
+    *file = to_endp_file(sftp_file);
+    return 0;
+}
+
+int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file)
+{
+    SFTFS_TRACE_FUNC
+    (void)endp;
+    return sftp_close(from_endp_file(file)) == 0 ? 0 : -EIO;
 }
