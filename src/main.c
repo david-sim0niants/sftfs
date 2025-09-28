@@ -142,6 +142,7 @@ static struct fuse_operations ops = {
     .releasedir = sftfs_releasedir,
     .open = sftfs_open,
     .release = sftfs_release,
+    .access = sftfs_access,
     .destroy = destroy,
 };
 
@@ -174,6 +175,8 @@ int main(int argc, char *argv[])
     int rc = init_sftp(&sftfs.sftp, sftfs.ssh);
     if (rc != EXIT_SUCCESS)
         deinit_sftp_and_ssh();
+
+    fuse_opt_add_arg(&args, "-s"); // use single-threaded mode
 
     return fuse_main(args.argc, args.argv, &ops, sftfs.sftp);
 }

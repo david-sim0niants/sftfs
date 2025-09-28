@@ -13,3 +13,4 @@ int sftfs_readdir(const char *path, void *buf, fuse_fill_dir_t fill_dir, off_t o
 int sftfs_releasedir(const char *path, struct fuse_file_info *fi);
 int sftfs_open(const char *path, struct fuse_file_info *fi);
 int sftfs_release(const char *path, struct fuse_file_info *fi);
+int sftfs_access(const char *path, int mode);

@@ -1,6 +1,23 @@
 #include "ssh.h"
 #include "logging.h"
 
+static int decide_ssh_log_severity(void)
+{
+    switch (SFTFS_ACTIVE_LOGGING_SEVERITY) {
+        case SFTFS_TRACE:
+            return SSH_LOG_TRACE;
+        case SFTFS_DEBUG:
+            return SSH_LOG_DEBUG;
+        case SFTFS_INFO:
+            return SSH_LOG_INFO;
+        case SFTFS_WARN:
+        case SFTFS_ERROR:
+            return SSH_LOG_WARN;
+        default:
+            return SSH_LOG_NONE;
+    }
+}
+
 int sftfs_ssh_connect(struct sftfs_ssh_config *config, ssh_session *session)
 {
     ssh_session ssh = ssh_new();
@@ -21,6 +38,12 @@ int sftfs_ssh_connect(struct sftfs_ssh_config *config, ssh_session *session)
 
     if (ssh_options_set(ssh, SSH_OPTIONS_PORT, &config->port) != SSH_OK) {
         sftfs_error("Failed setting ssh port\n");
+        return -1;
+    }
+
+    int log_severity = decide_ssh_log_severity();
+    if (ssh_options_set(ssh, SSH_OPTIONS_LOG_VERBOSITY, &log_severity) != SSH_OK) {
+        sftfs_warn("Failed setting ssh log severity\n");
         return -1;
     }
 

@@ -59,7 +59,7 @@ struct readdir_callee_data {
 static int readdir_callee(struct sftfs_endp_direntry *direntry, void *user_data)
 {
     SFTFS_TRACE_FUNC
-    sftfs_debug("Entry=%s\n", direntry->name);
+    sftfs_debug("entry='%s'\n", direntry->name);
 
     struct readdir_callee_data *data = user_data;
     data->rc = data->fill_dir(data->buf, direntry->name, &direntry->stat, 0, 0);
@@ -117,4 +117,11 @@ int sftfs_release(const char *path, struct fuse_file_info *fi)
     sftfs_debug("path=%s, fi=%p\n", path, fi);
 
     return sftfs_endp_close(get_endp(), wrap_file(fi->fh));
+}
+
+int sftfs_access(const char *path, int mode)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, mode=%o\n", path, mode);
+    return sftfs_endp_access(get_endp(), path, mode);
 }

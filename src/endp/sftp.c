@@ -42,9 +42,15 @@ static int to_errno(int err)
         case SSH_FX_WRITE_PROTECT:
             return EROFS;
         case SSH_FX_EOF:
+            return ENODATA;
         default:
-            return -1;
+            return 255;
     }
+}
+
+static inline int ret_sftp_err(sftp_session sftp)
+{
+    return -to_errno(sftp_get_error(sftp));
 }
 
 static void convert_sftp_attr_to_stat(sftp_attributes attr, struct stat *stat)
@@ -83,7 +89,7 @@ int sftfs_endp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, 
 
     if (NULL == attr)
         if (NULL == (attr = sftp_stat(sftp, path)))
-            return -to_errno(sftp_get_error(sftp));
+            return ret_sftp_err(sftp);
 
     convert_sftp_attr_to_stat(attr, stat);
     sftp_attributes_free(attr);
@@ -100,7 +106,7 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
 
     char *target = sftp_readlink(sftp, path);
     if (NULL == target)
-        return -sftp_get_error(sftp);
+        return ret_sftp_err(sftp);
 
     size_t copy_size = strnlen(target, bufsiz - 1);
     strncpy(buf, path, copy_size);
@@ -131,7 +137,7 @@ int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 
     sftp_dir sftp_dir = sftp_opendir(sftp, path);
     if (NULL == sftp_dir)
-        return -to_errno(sftp_get_error(sftp));
+        return ret_sftp_err(sftp);
 
     *dir = to_endp_dir(sftp_dir);
     return 0;
@@ -163,7 +169,7 @@ int sftfs_endp_readdir(sftfs_endp endp, const sftfs_endp_dir dir, int flags,
     if (sftp_dir_eof(from_endp_dir(dir)))
         return 0;
     else
-        return -to_errno(sftp_get_error(sftp));
+        return ret_sftp_err(sftp);
 }
 
 int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir)
@@ -180,7 +186,7 @@ int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, in
 
     sftp_file sftp_file = sftp_open(sftp, path, access_flags, 0);
     if (NULL == sftp_file)
-        return -to_errno(sftp_get_error(sftp));
+        return ret_sftp_err(sftp);
 
     *file = to_endp_file(sftp_file);
     return 0;
@@ -191,4 +197,20 @@ int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file)
     SFTFS_TRACE_FUNC
     (void)endp;
     return sftp_close(from_endp_file(file)) == 0 ? 0 : -EIO;
+}
+
+int sftfs_endp_access(sftfs_endp endp, const char *path, int mode)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    sftp_attributes attr = sftp_stat(sftp, path);
+    if (NULL == attr)
+        return ret_sftp_err(sftp);
+
+    sftfs_debug("attr->permissions=%o\n", attr->permissions);
+    int rc = ((attr->permissions & mode) == mode) ? 0 : -EACCES;
+
+    sftp_attributes_free(attr);
+    return rc;
 }
