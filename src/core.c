@@ -115,7 +115,6 @@ int sftfs_release(const char *path, struct fuse_file_info *fi)
 {
     SFTFS_TRACE_FUNC
     sftfs_debug("path=%s, fi=%p\n", path, fi);
-
     return sftfs_endp_close(get_endp(), wrap_file(fi->fh));
 }
 

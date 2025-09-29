@@ -5,7 +5,7 @@
 struct sftfs_ssh_config {
     const char *host;
     const char *user;
-    unsigned short port;
+    int port;
 };
 
 int sftfs_ssh_connect(struct sftfs_ssh_config *config, ssh_session *session);
