@@ -4,7 +4,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-_Thread_local sftfs_logger_endpoint_t logger_endpoint = sftfs_default_logger_endpoint;
+sftfs_logger_endpoint_t logger_endpoint = sftfs_default_logger_endpoint;
+
+void sftfs_set_logger_endpoint(sftfs_logger_endpoint_t endpoint)
+{
+    __atomic_store(&logger_endpoint, &endpoint, __ATOMIC_SEQ_CST);
+}
 
 static const char *colored_headings[] = {
     "[\033[34mTRACE\033[0m] ",
@@ -26,12 +31,7 @@ static const char *uncolored_headings[] = {
     ""
 };
 
-void sftfs_set_logger_endpoint(sftfs_logger_endpoint_t endpoint)
-{
-    logger_endpoint = endpoint;
-}
-
-int sftfs_default_logger_endpoint(sftfs_log_severity_t severity, const char *fmt, va_list args)
+int sftfs_default_logger_endpoint(sftfs_log_severity_t severity, const char *fmt, ...)
 {
     assert(severity >= SFTFS_TRACE);
     assert(severity <= SFTFS_OFF);
@@ -41,5 +41,9 @@ int sftfs_default_logger_endpoint(sftfs_log_severity_t severity, const char *fmt
     else
         fprintf(stderr, "%s", uncolored_headings[severity]);
 
-    return vfprintf(stderr, fmt, args);
+    va_list args;
+    va_start(args, fmt);
+    int ret = vfprintf(stderr, fmt, args);
+    va_end(args);
+    return ret;
 }
