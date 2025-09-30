@@ -109,7 +109,7 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
         return ret_sftp_err(sftp);
 
     size_t copy_size = strnlen(target, bufsiz - 1);
-    strncpy(buf, path, copy_size);
+    strncpy(buf, target, copy_size);
     buf[copy_size] = '\0';
 
     ssh_string_free_char(target);

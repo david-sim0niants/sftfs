@@ -102,7 +102,7 @@ static int password_prompt_cb(const char *password, void *user_data)
         case SSH_AUTH_ERROR:
         default:
             sftfs_fatal("Authentication failed: %s\n", ssh_get_error(ssh));
-            return -1;
+            return EPERM;
     }
 }
 
@@ -117,15 +117,25 @@ static int try_authorize_host_with_password(struct sftfs_ssh_config *config, ssh
         .flags = 0,
     };
 
+#ifndef NDEBUG
+    prompt_config.flags = SFTFS_PASSWORD_PROMPT_DISABLE_SIGNAL_HANDLING;
+#endif
+
     return sftfs_password_prompt_wrap_critical_call(&prompt_config, prompt_text, password_prompt_cb, ssh);
 }
 
 static int handle_host_authorization(struct sftfs_ssh_config *config, ssh_session ssh)
 {
 #define PASSWORD_ATTEMPTS 3
-    for (int i = 0; i < PASSWORD_ATTEMPTS; ++i)
-        if (try_authorize_host_with_password(config, ssh) == SSH_OK)
+    for (int i = 0; i < PASSWORD_ATTEMPTS; ++i) {
+        int rc = try_authorize_host_with_password(config, ssh);
+        if (rc == 0)
             return 0;
+        else if (rc == EAGAIN)
+            continue;
+        else
+            break;
+    }
     return -1;
 }
 

@@ -5,6 +5,7 @@
 
 enum sftfs_password_prompt_flags {
     SFTFS_PASSWORD_PROMPT_VERIFY = 1,
+    SFTFS_PASSWORD_PROMPT_DISABLE_SIGNAL_HANDLING = 2,
 };
 
 struct sftfs_password_prompt_config {

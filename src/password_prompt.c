@@ -154,8 +154,9 @@ sftfs_password_prompt sftfs_password_prompt_start(struct sftfs_password_prompt_c
     if (prompt->is_dumpable < 0)
         goto set_dumpable_failed;
 
-    if (cover_unsafe_signals(prompt) != 0)
-        goto signal_handling_failed;
+    if (! (prompt->flags & SFTFS_PASSWORD_PROMPT_DISABLE_SIGNAL_HANDLING))
+        if (cover_unsafe_signals(prompt) != 0)
+            goto signal_handling_failed;
 
     return prompt;
 
@@ -177,7 +178,8 @@ int sftfs_password_prompt_stop(sftfs_password_prompt prompt)
 
     explicit_bzero(prompt->password, prompt->password_buffer_size);
 
-    rc = uncover_unsafe_signals(prompt, NSIG);
+    if (! (prompt->flags & SFTFS_PASSWORD_PROMPT_DISABLE_SIGNAL_HANDLING))
+        rc = uncover_unsafe_signals(prompt, NSIG);
 
     reset_nodumpable(prompt->is_dumpable);
 
