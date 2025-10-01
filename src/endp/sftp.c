@@ -1,16 +1,71 @@
 #include "endp.h"
+#include "endp/sftp.h"
 
 #include "func_trace.h"
 
 #include <assert.h>
 #include <errno.h>
 #include <libssh/sftp.h>
+#include <stdlib.h>
 #include <string.h>
+
+struct sftfs_endp_handle {
+    sftp_session sftp;
+    const char *work_dir;
+};
 
 static inline sftp_session get_sftp(sftfs_endp endp)
 {
     SFTFS_TRACE_FUNC
-    return (sftp_session)endp;
+    return ((struct sftfs_endp_handle *)endp)->sftp;
+}
+
+static inline const char *get_work_dir(sftfs_endp endp)
+{
+    SFTFS_TRACE_FUNC
+    return ((struct sftfs_endp_handle *)endp)->work_dir;
+}
+
+static sftp_session sftfs_endp_init_sftp_session(ssh_session ssh)
+{
+    sftp_session sftp = sftp_new(ssh);
+
+    if (NULL == sftp) {
+        sftfs_fatal("Failed allocating SFTP session: %s\n", ssh_get_error(ssh));
+        return NULL;
+    }
+
+    if (sftp_init(sftp) != SSH_OK) {
+        sftfs_fatal("Failed initializing SFTP session: [ %d ]\n", sftp_get_error(sftp));
+        sftp_free(sftp);
+        return NULL;
+    }
+
+    return sftp;
+}
+
+sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *config)
+{
+    if (! config->work_dir)
+        return NULL;
+
+    struct sftfs_endp_handle *handle = calloc(1, sizeof(struct sftfs_endp_handle));
+
+    handle->sftp = sftfs_endp_init_sftp_session(ssh);
+    if (! handle->sftp) {
+        free(handle);
+        return NULL;
+    }
+
+    handle->work_dir = config->work_dir;
+
+    return handle;
+}
+
+void sftfs_endp_deinit(sftfs_endp endp_sftp)
+{
+    sftp_free(get_sftp(endp_sftp));
+    free((struct sftfs_endp_handle *)endp_sftp);
 }
 
 static int to_errno(int err)
