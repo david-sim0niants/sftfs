@@ -11,19 +11,25 @@
 
 struct sftfs_endp_handle {
     sftp_session sftp;
-    const char *work_dir;
+    char *work_dir;
 };
+
+static inline struct sftfs_endp_handle *get_handle(sftfs_endp endp)
+{
+    SFTFS_TRACE_FUNC
+    return (struct sftfs_endp_handle *)endp;
+}
 
 static inline sftp_session get_sftp(sftfs_endp endp)
 {
     SFTFS_TRACE_FUNC
-    return ((struct sftfs_endp_handle *)endp)->sftp;
+    return get_handle(endp)->sftp;
 }
 
 static inline const char *get_work_dir(sftfs_endp endp)
 {
     SFTFS_TRACE_FUNC
-    return ((struct sftfs_endp_handle *)endp)->work_dir;
+    return get_handle(endp)->work_dir;
 }
 
 static sftp_session sftfs_endp_init_sftp_session(ssh_session ssh)
@@ -50,20 +56,32 @@ sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *confi
         return NULL;
 
     struct sftfs_endp_handle *handle = calloc(1, sizeof(struct sftfs_endp_handle));
+    if (! handle)
+        goto handle_alloc_failed;
 
     handle->sftp = sftfs_endp_init_sftp_session(ssh);
-    if (! handle->sftp) {
-        free(handle);
-        return NULL;
+    if (! handle->sftp)
+        goto sftp_init_failed;
+
+    handle->work_dir = sftp_canonicalize_path(handle->sftp, config->work_dir);
+    if (! handle->work_dir) {
+        sftfs_fatal("Failed to canonicalize working directory: %d\n", sftp_get_error(handle->sftp));
+        goto canonocalize_work_dir_failed;
     }
 
-    handle->work_dir = config->work_dir;
-
     return handle;
+
+canonocalize_work_dir_failed:
+    sftp_free(handle->sftp);
+sftp_init_failed:
+    free(handle);
+handle_alloc_failed:
+    return NULL;
 }
 
 void sftfs_endp_deinit(sftfs_endp endp_sftp)
 {
+    ssh_string_free_char(get_handle(endp_sftp)->work_dir);
     sftp_free(get_sftp(endp_sftp));
     free((struct sftfs_endp_handle *)endp_sftp);
 }
