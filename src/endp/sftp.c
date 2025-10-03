@@ -11,29 +11,27 @@
 
 struct sftfs_endp_handle {
     sftp_session sftp;
+
     char *work_dir;
+    size_t work_dir_len;
+
+    char *current_path_buffer;
+    size_t current_path_buflen;
 };
 
 static inline struct sftfs_endp_handle *get_handle(sftfs_endp endp)
 {
-    SFTFS_TRACE_FUNC
     return (struct sftfs_endp_handle *)endp;
 }
 
 static inline sftp_session get_sftp(sftfs_endp endp)
 {
-    SFTFS_TRACE_FUNC
     return get_handle(endp)->sftp;
-}
-
-static inline const char *get_work_dir(sftfs_endp endp)
-{
-    SFTFS_TRACE_FUNC
-    return get_handle(endp)->work_dir;
 }
 
 static sftp_session sftfs_endp_init_sftp_session(ssh_session ssh)
 {
+    SFTFS_TRACE_FUNC
     sftp_session sftp = sftp_new(ssh);
 
     if (NULL == sftp) {
@@ -52,6 +50,7 @@ static sftp_session sftfs_endp_init_sftp_session(ssh_session ssh)
 
 sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *config)
 {
+    SFTFS_TRACE_FUNC
     if (! config->work_dir)
         return NULL;
 
@@ -69,8 +68,23 @@ sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *confi
         goto canonocalize_work_dir_failed;
     }
 
+    sftfs_debug("Working directory: %s\n", handle->work_dir);
+
+    handle->work_dir_len = strlen(handle->work_dir);
+    handle->current_path_buflen = handle->work_dir_len * 2 + 1;
+
+    handle->current_path_buffer = malloc(handle->current_path_buflen);
+    if (! handle->current_path_buffer) {
+        sftfs_fatal("Failed to allocate current path buffer\n");
+        goto current_path_alloc_failed;
+    }
+
+    memcpy(handle->current_path_buffer, handle->work_dir, handle->work_dir_len + 1);
+
     return handle;
 
+current_path_alloc_failed:
+    free(handle->current_path_buffer);
 canonocalize_work_dir_failed:
     sftp_free(handle->sftp);
 sftp_init_failed:
@@ -81,6 +95,8 @@ handle_alloc_failed:
 
 void sftfs_endp_deinit(sftfs_endp endp_sftp)
 {
+    SFTFS_TRACE_FUNC
+    free(get_handle(endp_sftp)->current_path_buffer);
     ssh_string_free_char(get_handle(endp_sftp)->work_dir);
     sftp_free(get_sftp(endp_sftp));
     free((struct sftfs_endp_handle *)endp_sftp);
@@ -126,6 +142,32 @@ static inline int ret_sftp_err(sftp_session sftp)
     return -to_errno(sftp_get_error(sftp));
 }
 
+static char *ensure_current_path_buffer_long_enough(sftfs_endp endp, size_t rel_path_len)
+{
+    struct sftfs_endp_handle *handle = get_handle(endp);
+    size_t abs_path_len = rel_path_len + handle->work_dir_len;
+    if (abs_path_len + 1 > handle->current_path_buflen) {
+        char *path_buffer = realloc(handle->current_path_buffer, abs_path_len + 1);
+        if (! path_buffer) {
+            sftfs_fatal("realloc() failed, could not extend memory to hold the current absolute path\n");
+            return NULL;
+        }
+        handle->current_path_buffer = path_buffer;
+    }
+    return handle->current_path_buffer;
+}
+
+static char *get_abs_path(sftfs_endp endp, const char *rel_path)
+{
+    SFTFS_TRACE_FUNC
+    size_t rel_path_len = strlen(rel_path);
+    char *abs_path = ensure_current_path_buffer_long_enough(endp, rel_path_len);
+    if (! abs_path)
+        return NULL;
+    memcpy(abs_path + get_handle(endp)->work_dir_len, rel_path, rel_path_len + 1);
+    return get_handle(endp)->current_path_buffer;
+}
+
 static void convert_sftp_attr_to_stat(sftp_attributes attr, struct stat *stat)
 {
     SFTFS_TRACE_FUNC
@@ -158,6 +200,9 @@ int sftfs_endp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, 
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
 
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
     sftp_attributes attr = file.handle ? sftp_fstat(from_endp_file(file)) : sftp_lstat(sftp, path);
 
     if (NULL == attr)
@@ -174,8 +219,10 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
 {
     SFTFS_TRACE_FUNC
     assert(bufsiz > 0);
-
     sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
 
     char *target = sftp_readlink(sftp, path);
     if (NULL == target)
@@ -207,6 +254,9 @@ int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
 
     sftp_dir sftp_dir = sftp_opendir(sftp, path);
     if (NULL == sftp_dir)
@@ -257,6 +307,9 @@ int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, in
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
 
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
     sftp_file sftp_file = sftp_open(sftp, path, access_flags, 0);
     if (NULL == sftp_file)
         return ret_sftp_err(sftp);
@@ -277,12 +330,15 @@ int sftfs_endp_access(sftfs_endp endp, const char *path, int mode)
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
 
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
     sftp_attributes attr = sftp_stat(sftp, path);
     if (NULL == attr)
         return ret_sftp_err(sftp);
 
     sftfs_debug("attr->permissions=%o\n", attr->permissions);
-    int rc = ((attr->permissions & mode) == mode) ? 0 : -EACCES;
+    int rc = ((attr->permissions & (uint32_t)mode) == (uint32_t)mode) ? 0 : -EACCES;
 
     sftp_attributes_free(attr);
     return rc;
