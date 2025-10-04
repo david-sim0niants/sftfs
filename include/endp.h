@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 
 typedef void *sftfs_endp;
 
@@ -37,6 +38,8 @@ int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir);
 int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, int access_flags);
 
 int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t size, off_t off);
+
+int sftfs_endp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv);
 
 int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file);
 

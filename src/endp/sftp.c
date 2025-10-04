@@ -313,6 +313,7 @@ int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, in
 int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t size, off_t off)
 {
     SFTFS_TRACE_FUNC
+    assert(off >= 0);
     sftp_session sftp = get_sftp(endp);
 
     if (sftp_seek64(from_endp_file(file), off) < 0)
@@ -322,6 +323,42 @@ int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t siz
     if (rc < 0)
         rc = ret_sftp_err(sftp);
     return rc;
+}
+
+int sftfs_endp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv)
+{
+    SFTFS_TRACE_FUNC
+
+    sftp_session sftp = get_sftp(endp);
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    sftp_statvfs_t sftp_statv = sftp_statvfs(sftp, path);
+
+    if (! sftp_statv)
+        return ret_sftp_err(sftp);
+
+    statv->f_bsize = (unsigned long)sftp_statv->f_bsize;
+    statv->f_frsize = (unsigned long)sftp_statv->f_frsize;
+    statv->f_blocks = (__fsblkcnt_t)sftp_statv->f_blocks;
+    statv->f_bfree = (__fsblkcnt_t)sftp_statv->f_bfree;
+    statv->f_bavail = (__fsblkcnt_t)sftp_statv->f_bavail;
+    statv->f_files = (__fsfilcnt_t)sftp_statv->f_files;
+    statv->f_ffree = (__fsfilcnt_t)sftp_statv->f_ffree;
+    statv->f_favail = (__fsfilcnt_t)sftp_statv->f_favail;
+    statv->f_fsid = (unsigned long)sftp_statv->f_fsid;
+    statv->f_flag = (unsigned long)sftp_statv->f_flag;
+    statv->f_namemax = (unsigned long)sftp_statv->f_namemax;
+    statv->f_type = 0;
+    for (size_t i = 0; i < (sizeof(statv->__f_spare) / sizeof(statv->__f_spare[0])); ++i)
+        statv->__f_spare[i] = 0;
+#ifdef _STATVFSBUF_F_UNUSED
+    statv->__f_unused = 0;
+#endif
+
+    sftp_statvfs_free(sftp_statv);
+
+    return 0;
 }
 
 int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file)
@@ -344,7 +381,17 @@ int sftfs_endp_access(sftfs_endp endp, const char *path, int mode)
         return ret_sftp_err(sftp);
 
     sftfs_debug("attr->permissions=%o\n", attr->permissions);
-    int rc = ((attr->permissions & (uint32_t)mode) == (uint32_t)mode) ? 0 : -EACCES;
+
+    int rc = 0;
+
+    if ((mode & R_OK) && !(attr->permissions & S_IRUSR))
+        rc = -EACCES;
+
+    if ((mode & W_OK) && !(attr->permissions & S_IWUSR))
+        rc = -EACCES;
+
+    if ((mode & X_OK) && !(attr->permissions & S_IXUSR))
+        rc = -EACCES;
 
     sftp_attributes_free(attr);
     return rc;
