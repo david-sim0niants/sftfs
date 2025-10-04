@@ -2,7 +2,6 @@
 #include "logging.h"
 
 #include <assert.h>
-#include <stdatomic.h>
 #include <string.h>
 #include <errno.h>
 #include <signal.h>

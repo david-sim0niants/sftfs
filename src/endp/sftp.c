@@ -2,6 +2,7 @@
 #include "endp/sftp.h"
 
 #include "func_trace.h"
+#include "str.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -11,12 +12,9 @@
 
 struct sftfs_endp_handle {
     sftp_session sftp;
-
     char *work_dir;
     size_t work_dir_len;
-
-    char *current_path_buffer;
-    size_t current_path_buflen;
+    sftfs_str curr_abs_path;
 };
 
 static inline struct sftfs_endp_handle *get_handle(sftfs_endp endp)
@@ -67,24 +65,20 @@ sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *confi
         sftfs_fatal("Failed to canonicalize working directory: %d\n", sftp_get_error(handle->sftp));
         goto canonocalize_work_dir_failed;
     }
+    handle->work_dir_len = strlen(handle->work_dir);
 
     sftfs_debug("Working directory: %s\n", handle->work_dir);
 
-    handle->work_dir_len = strlen(handle->work_dir);
-    handle->current_path_buflen = handle->work_dir_len * 2 + 1;
-
-    handle->current_path_buffer = malloc(handle->current_path_buflen);
-    if (! handle->current_path_buffer) {
-        sftfs_fatal("Failed to allocate current path buffer\n");
+    handle->curr_abs_path = sftfs_str_create(handle->work_dir, handle->work_dir_len);
+    if (! handle->curr_abs_path) {
+        sftfs_fatal("Failed to create current absolute path\n");
         goto current_path_alloc_failed;
     }
-
-    memcpy(handle->current_path_buffer, handle->work_dir, handle->work_dir_len + 1);
 
     return handle;
 
 current_path_alloc_failed:
-    free(handle->current_path_buffer);
+    ssh_string_free_char(handle->work_dir);
 canonocalize_work_dir_failed:
     sftp_free(handle->sftp);
 sftp_init_failed:
@@ -96,7 +90,7 @@ handle_alloc_failed:
 void sftfs_endp_deinit(sftfs_endp endp_sftp)
 {
     SFTFS_TRACE_FUNC
-    free(get_handle(endp_sftp)->current_path_buffer);
+    sftfs_str_delete(get_handle(endp_sftp)->curr_abs_path);
     ssh_string_free_char(get_handle(endp_sftp)->work_dir);
     sftp_free(get_sftp(endp_sftp));
     free((struct sftfs_endp_handle *)endp_sftp);
@@ -142,30 +136,28 @@ static inline int ret_sftp_err(sftp_session sftp)
     return -to_errno(sftp_get_error(sftp));
 }
 
-static char *ensure_current_path_buffer_long_enough(sftfs_endp endp, size_t rel_path_len)
-{
-    struct sftfs_endp_handle *handle = get_handle(endp);
-    size_t abs_path_len = rel_path_len + handle->work_dir_len;
-    if (abs_path_len + 1 > handle->current_path_buflen) {
-        char *path_buffer = realloc(handle->current_path_buffer, abs_path_len + 1);
-        if (! path_buffer) {
-            sftfs_fatal("realloc() failed, could not extend memory to hold the current absolute path\n");
-            return NULL;
-        }
-        handle->current_path_buffer = path_buffer;
-    }
-    return handle->current_path_buffer;
-}
-
-static char *get_abs_path(sftfs_endp endp, const char *rel_path)
+static const char *get_abs_path(sftfs_endp endp, const char *rel_path)
 {
     SFTFS_TRACE_FUNC
-    size_t rel_path_len = strlen(rel_path);
-    char *abs_path = ensure_current_path_buffer_long_enough(endp, rel_path_len);
-    if (! abs_path)
+    struct sftfs_endp_handle *handle = get_handle(endp);
+
+    sftfs_str abs_path = sftfs_str_resize(handle->curr_abs_path, handle->work_dir_len);
+    if (! abs_path) {
+        sftfs_fatal("Resizing absolute path string failed\n");
         return NULL;
-    memcpy(abs_path + get_handle(endp)->work_dir_len, rel_path, rel_path_len + 1);
-    return get_handle(endp)->current_path_buffer;
+    }
+    handle->curr_abs_path = abs_path;
+
+    abs_path = sftfs_str_extend_cstr(handle->curr_abs_path, rel_path);
+    if (! abs_path) {
+        sftfs_fatal("Extending absolute path with relative path failed\n");
+        return NULL;
+    }
+    handle->curr_abs_path = abs_path;
+
+    sftfs_debug("current absolute path: %s\n", sftfs_str_c_ro(handle->curr_abs_path));
+
+    return sftfs_str_c_ro(handle->curr_abs_path);
 }
 
 static void convert_sftp_attr_to_stat(sftp_attributes attr, struct stat *stat)

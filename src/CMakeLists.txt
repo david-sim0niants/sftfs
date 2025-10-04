@@ -1,5 +1,5 @@
 set(TARGET_NAME sftfs_common)
-add_library(${TARGET_NAME} OBJECT logging.c password_prompt.c)
+add_library(${TARGET_NAME} OBJECT logging.c password_prompt.c str.c)
 target_include_directories(${TARGET_NAME} PUBLIC ${ROOT_INCLUDE_DIR})
 
 option(HAVE_FUNCTION_TRACING "Tracing specific function entries and exits." OFF)
