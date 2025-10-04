@@ -310,6 +310,20 @@ int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, in
     return 0;
 }
 
+int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t size, off_t off)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (sftp_seek64(from_endp_file(file), off) < 0)
+        ret_sftp_err(sftp);
+
+    int rc = sftp_read(from_endp_file(file), buf, size);
+    if (rc < 0)
+        rc = ret_sftp_err(sftp);
+    return rc;
+}
+
 int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file)
 {
     SFTFS_TRACE_FUNC

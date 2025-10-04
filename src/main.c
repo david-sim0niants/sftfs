@@ -157,6 +157,7 @@ static struct fuse_operations ops = {
     .readdir = sftfs_readdir,
     .releasedir = sftfs_releasedir,
     .open = sftfs_open,
+    .read = sftfs_read,
     .release = sftfs_release,
     .access = sftfs_access,
     .destroy = destroy,

@@ -36,6 +36,8 @@ int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir);
 
 int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, int access_flags);
 
+int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t size, off_t off);
+
 int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file);
 
 int sftfs_endp_access(sftfs_endp endp, const char *path, int mode);

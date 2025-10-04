@@ -111,6 +111,12 @@ int sftfs_open(const char *path, struct fuse_file_info *fi)
     return rc;
 }
 
+int sftfs_read(const char *path, char *buf, size_t size, off_t off, struct fuse_file_info *fi)
+{
+    (void)path;
+    return sftfs_endp_read(get_endp(), wrap_file(fi->fh), buf, size, off);
+}
+
 int sftfs_release(const char *path, struct fuse_file_info *fi)
 {
     SFTFS_TRACE_FUNC
