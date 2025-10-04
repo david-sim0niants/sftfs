@@ -39,6 +39,34 @@ int sftfs_readlink(const char *path, char *buf, size_t bufsiz)
     return sftfs_endp_readlink(get_endp(), path, buf, bufsiz);
 }
 
+int sftfs_mkdir(const char *path, mode_t mode)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s\n, mode=%o", path, mode);
+    return sftfs_endp_mkdir(get_endp(), path, mode);
+}
+
+int sftfs_unlink(const char *path)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s\n", path);
+    return sftfs_endp_unlink(get_endp(), path);
+}
+
+int sftfs_rmdir(const char *path)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s\n", path);
+    return sftfs_endp_rmdir(get_endp(), path);
+}
+
+int sftfs_symlink(const char *target, const char *linkpath)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("target=%s, linkpath=%s\n", target, linkpath);
+    return sftfs_endp_symlink(get_endp(), target, linkpath);
+}
+
 int sftfs_opendir(const char *path, struct fuse_file_info *fi)
 {
     SFTFS_TRACE_FUNC
@@ -113,12 +141,15 @@ int sftfs_open(const char *path, struct fuse_file_info *fi)
 
 int sftfs_read(const char *path, char *buf, size_t size, off_t off, struct fuse_file_info *fi)
 {
-    (void)path;
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, buf=%p, size=%zu, off=%ld, fi=%p", path, buf, size, off, fi);
     return sftfs_endp_read(get_endp(), wrap_file(fi->fh), buf, size, off);
 }
 
 int sftfs_statfs(const char *path, struct statvfs *statv)
 {
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s\n", path);
     return sftfs_endp_statfs(get_endp(), path, statv);
 }
 

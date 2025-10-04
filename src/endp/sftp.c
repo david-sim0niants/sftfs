@@ -229,6 +229,62 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
     return 0;
 }
 
+int sftfs_endp_mkdir(sftfs_endp endp, const char *path, mode_t mode)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    if (sftp_mkdir(sftp, path, mode) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
+}
+
+int sftfs_endp_unlink(sftfs_endp endp, const char *path)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    if (sftp_unlink(sftp, path) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
+}
+
+int sftfs_endp_rmdir(sftfs_endp endp, const char *path)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    if (sftp_rmdir(sftp, path) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
+}
+
+int sftfs_endp_symlink(sftfs_endp endp, const char *target, const char *linkpath)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (linkpath = get_abs_path(endp, linkpath)))
+        return -ENOMEM;
+
+    if (sftp_symlink(sftp, target, linkpath) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
+}
+
 static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)
 {
     SFTFS_TRACE_FUNC

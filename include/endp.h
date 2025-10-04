@@ -28,6 +28,14 @@ int sftfs_endp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, 
 
 int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t bufsiz);
 
+int sftfs_endp_mkdir(sftfs_endp endp, const char *path, mode_t mode);
+
+int sftfs_endp_unlink(sftfs_endp endp, const char *path);
+
+int sftfs_endp_rmdir(sftfs_endp endp, const char *path);
+
+int sftfs_endp_symlink(sftfs_endp endp, const char *target, const char *linkpath);
+
 int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir);
 
 int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
