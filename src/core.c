@@ -74,6 +74,20 @@ int sftfs_rename(const char *oldpath, const char *newpath, unsigned int flags)
     return sftfs_endp_rename(get_endp(), oldpath, newpath, flags);
 }
 
+int sftfs_chmod(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, mode=%o, fi=%p\n", path, mode, fi);
+    return sftfs_endp_chmod(get_endp(), path, mode);
+}
+
+int sftfs_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, uid=%d, gid=%d, fi=%p\n", path, uid, gid, fi);
+    return sftfs_endp_chown(get_endp(), path, uid, gid);
+}
+
 int sftfs_opendir(const char *path, struct fuse_file_info *fi)
 {
     SFTFS_TRACE_FUNC

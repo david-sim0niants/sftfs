@@ -350,6 +350,34 @@ oldpath_str_create_failed:
     return rc;
 }
 
+int sftfs_endp_chmod(sftfs_endp endp, const char *path, mode_t mode)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    if (sftp_chmod(sftp, path, mode) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
+}
+
+int sftfs_endp_chown(sftfs_endp endp, const char *path, uid_t uid, gid_t gid)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    if (sftp_chown(sftp, path, uid, gid) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
+}
+
 static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)
 {
     SFTFS_TRACE_FUNC
