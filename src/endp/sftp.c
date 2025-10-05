@@ -476,6 +476,21 @@ int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t siz
     return rc;
 }
 
+int sftfs_endp_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, size_t size, off_t off)
+{
+    SFTFS_TRACE_FUNC
+    assert(off >= 0);
+    sftp_session sftp = get_sftp(endp);
+
+    if (sftp_seek64(from_endp_file(file), off) < 0)
+        ret_sftp_err(sftp);
+
+    int rc = sftp_write(from_endp_file(file), buf, size);
+    if (rc < 0)
+        rc = ret_sftp_err(sftp);
+    return rc;
+}
+
 int sftfs_endp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv)
 {
     SFTFS_TRACE_FUNC

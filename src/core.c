@@ -163,8 +163,15 @@ int sftfs_open(const char *path, struct fuse_file_info *fi)
 int sftfs_read(const char *path, char *buf, size_t size, off_t off, struct fuse_file_info *fi)
 {
     SFTFS_TRACE_FUNC
-    sftfs_debug("path=%s, buf=%p, size=%zu, off=%ld, fi=%p", path, buf, size, off, fi);
+    sftfs_debug("path=%s, buf=%p, size=%zu, off=%ld, fi=%p\n", path, buf, size, off, fi);
     return sftfs_endp_read(get_endp(), wrap_file(fi->fh), buf, size, off);
+}
+
+int sftfs_write(const char *path, const char *buf, size_t size, off_t off, struct fuse_file_info *fi)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, buf=%p, size=%zu, off=%ld, fi=%p\n", path, buf, size, off, fi);
+    return sftfs_endp_write(get_endp(), wrap_file(fi->fh), buf, size, off);
 }
 
 int sftfs_statfs(const char *path, struct statvfs *statv)
