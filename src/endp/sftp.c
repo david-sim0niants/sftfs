@@ -4,11 +4,13 @@
 #include "func_trace.h"
 #include "str.h"
 
-#include <assert.h>
-#include <errno.h>
-#include <libssh/sftp.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+
+#include <errno.h>
+#include <libssh/sftp.h>
+#include <fcntl.h>
 
 struct sftfs_endp_handle {
     sftp_session sftp;
@@ -544,4 +546,39 @@ int sftfs_endp_access(sftfs_endp endp, const char *path, int mode)
 
     sftp_attributes_free(attr);
     return rc;
+}
+
+int sftfs_endp_create(sftfs_endp endp, const char *path, mode_t mode, sftfs_endp_file *file)
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    sftp_file sftp_file = sftp_open(sftp, path, O_CREAT | O_WRONLY, mode);
+    if (NULL == sftp_file)
+        return ret_sftp_err(sftp);
+
+    *file = to_endp_file(sftp_file);
+    return 0;
+}
+
+int sftfs_endp_utimens(sftfs_endp endp, const char *path, const struct timespec tv[2])
+{
+    SFTFS_TRACE_FUNC
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (path = get_abs_path(endp, path)))
+        return -ENOMEM;
+
+    struct timeval times[2] = {
+        {tv[0].tv_sec, tv[0].tv_nsec / 1000},
+        {tv[1].tv_sec, tv[1].tv_nsec / 1000},
+    };
+
+    if (sftp_utimes(sftp, path, times) < 0)
+        return ret_sftp_err(sftp);
+    else
+        return 0;
 }

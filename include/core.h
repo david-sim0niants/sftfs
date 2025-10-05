@@ -23,3 +23,5 @@ int sftfs_read(const char *path, char *buf, size_t size, off_t off, struct fuse_
 int sftfs_statfs(const char *path, struct statvfs *statv);
 int sftfs_release(const char *path, struct fuse_file_info *fi);
 int sftfs_access(const char *path, int mode);
+int sftfs_create(const char *path, mode_t mode, struct fuse_file_info *fi);
+int sftfs_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi);

@@ -2,7 +2,6 @@
 #include "endp.h"
 #include "endp/sftp.h"
 #include "logging.h"
-#include "ssh.h"
 #include "ssh_cli.h"
 
 #include <libssh/libssh.h>
@@ -168,6 +167,8 @@ static struct fuse_operations ops = {
     .statfs = sftfs_statfs,
     .release = sftfs_release,
     .access = sftfs_access,
+    .create = sftfs_create,
+    .utimens = sftfs_utimens,
     .destroy = destroy,
 };
 

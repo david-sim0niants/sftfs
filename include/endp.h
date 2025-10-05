@@ -58,3 +58,7 @@ int sftfs_endp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv);
 int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file);
 
 int sftfs_endp_access(sftfs_endp endp, const char *path, int mode);
+
+int sftfs_endp_create(sftfs_endp endp, const char *path, mode_t mode, sftfs_endp_file *file);
+
+int sftfs_endp_utimens(sftfs_endp endp, const char *path, const struct timespec tv[2]);

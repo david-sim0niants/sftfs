@@ -187,3 +187,22 @@ int sftfs_access(const char *path, int mode)
     sftfs_debug("path=%s, mode=%o\n", path, mode);
     return sftfs_endp_access(get_endp(), path, mode);
 }
+
+int sftfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, mode=%o, fi=%p\n", path, mode, fi);
+
+    sftfs_endp_file file;
+    int rc = sftfs_endp_create(get_endp(), path, mode, &file);
+    fi->fh = file.handle;
+    return rc;
+}
+
+int sftfs_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("path=%s, tv={%lds+%ldns, %lds+%ldns}, fi=%p\n",
+            path, tv[0].tv_sec, tv[0].tv_nsec, tv[1].tv_sec, tv[1].tv_nsec, fi);
+    return sftfs_endp_utimens(get_endp(), path, tv);
+}
