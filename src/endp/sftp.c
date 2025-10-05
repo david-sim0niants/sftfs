@@ -13,7 +13,7 @@
 struct sftfs_endp_handle {
     sftp_session sftp;
     char *work_dir;
-    size_t work_dir_len;
+    size_t base_dir_len;
     sftfs_str curr_abs_path;
 };
 
@@ -65,11 +65,18 @@ sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *confi
         sftfs_fatal("Failed to canonicalize working directory: %d\n", sftp_get_error(handle->sftp));
         goto canonocalize_work_dir_failed;
     }
-    handle->work_dir_len = strlen(handle->work_dir);
 
     sftfs_debug("Working directory: %s\n", handle->work_dir);
 
-    handle->curr_abs_path = sftfs_str_create(handle->work_dir, handle->work_dir_len);
+    // if the canonicalized working directory is '/', the base directory portion of
+    // the current absolute path can be an empty "" string, instead of "/",
+    // as FUSE provides paths with '/' prepended, otherwise paths will look like
+    // "//foo/bar" instead of "/foo/bar"
+    handle->base_dir_len = strlen(handle->work_dir);
+    if (handle->base_dir_len == 1 && handle->work_dir[0] == '/')
+        handle->base_dir_len = 0;
+
+    handle->curr_abs_path = sftfs_str_create(handle->work_dir, handle->base_dir_len);
     if (! handle->curr_abs_path) {
         sftfs_fatal("Failed to create current absolute path\n");
         goto current_path_alloc_failed;
@@ -141,7 +148,7 @@ static const char *get_abs_path(sftfs_endp endp, const char *rel_path)
     SFTFS_TRACE_FUNC
     struct sftfs_endp_handle *handle = get_handle(endp);
 
-    sftfs_str abs_path = sftfs_str_resize(handle->curr_abs_path, handle->work_dir_len);
+    sftfs_str abs_path = sftfs_str_resize(handle->curr_abs_path, handle->base_dir_len);
     if (! abs_path) {
         sftfs_fatal("Resizing absolute path string failed\n");
         return NULL;
@@ -150,7 +157,7 @@ static const char *get_abs_path(sftfs_endp endp, const char *rel_path)
 
     abs_path = sftfs_str_extend_cstr(handle->curr_abs_path, rel_path);
     if (! abs_path) {
-        sftfs_fatal("Extending absolute path with relative path failed\n");
+        sftfs_fatal("Extending absolute path with a relative path failed\n");
         return NULL;
     }
     handle->curr_abs_path = abs_path;
@@ -283,6 +290,64 @@ int sftfs_endp_symlink(sftfs_endp endp, const char *target, const char *linkpath
         return ret_sftp_err(sftp);
     else
         return 0;
+}
+
+#ifndef RENAME_NOREPLACE
+#define RENAME_NOREPLACE (1 << 0)
+#endif
+
+int sftfs_endp_rename(sftfs_endp endp, const char *oldpath, const char *newpath, unsigned int flags)
+{
+    SFTFS_TRACE_FUNC
+
+    if ((flags & ~(unsigned int)(RENAME_NOREPLACE)))
+        return -EOPNOTSUPP;
+
+    sftp_session sftp = get_sftp(endp);
+
+    if (NULL == (oldpath = get_abs_path(endp, oldpath)))
+        return -ENOMEM;
+
+    int rc = 0;
+    // cannot have two different "current absolute paths" at once, creating a copy of 'oldpath'
+    sftfs_str oldpath_str = sftfs_str_create(oldpath, strlen(oldpath));
+    if (NULL == oldpath_str) {
+        rc = -ENOMEM;
+        goto oldpath_str_create_failed;
+    }
+
+    oldpath = sftfs_str_c_ro(oldpath_str);
+
+    if (NULL == (newpath = get_abs_path(endp, newpath))) {
+        rc = -ENOMEM;
+        goto all_else_failed;
+    }
+
+    sftfs_debug("Renaming '%s' to '%s'\n", oldpath, newpath);
+
+    if ((flags & RENAME_NOREPLACE)) {
+        sftp_attributes attr = sftp_lstat(sftp, newpath);
+        if (attr) {
+            sftp_attributes_free(attr);
+            rc = -EEXIST;
+            goto all_else_failed;
+        }
+
+        if (NULL == attr && (rc = sftp_get_error(sftp), rc != SSH_FX_NO_SUCH_FILE)) {
+            rc = -to_errno(rc);
+            goto all_else_failed;
+        }
+    }
+
+    if (sftp_rename(sftp, oldpath, newpath) < 0)
+        rc = ret_sftp_err(sftp);
+    else
+        rc = 0;
+
+all_else_failed:
+    sftfs_str_delete(oldpath_str);
+oldpath_str_create_failed:
+    return rc;
 }
 
 static inline sftfs_endp_dir to_endp_dir(sftp_dir dir)

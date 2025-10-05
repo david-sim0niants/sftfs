@@ -36,6 +36,8 @@ int sftfs_endp_rmdir(sftfs_endp endp, const char *path);
 
 int sftfs_endp_symlink(sftfs_endp endp, const char *target, const char *linkpath);
 
+int sftfs_endp_rename(sftfs_endp endp, const char *oldpath, const char *newpath, unsigned int flags);
+
 int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir);
 
 int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,

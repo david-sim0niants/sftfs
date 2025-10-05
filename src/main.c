@@ -157,6 +157,7 @@ static struct fuse_operations ops = {
     .unlink = sftfs_unlink,
     .rmdir = sftfs_rmdir,
     .symlink = sftfs_symlink,
+    .rename = sftfs_rename,
     .opendir = sftfs_opendir,
     .readdir = sftfs_readdir,
     .releasedir = sftfs_releasedir,

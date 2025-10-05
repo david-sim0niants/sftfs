@@ -11,6 +11,7 @@ int sftfs_mkdir(const char *path, mode_t mode);
 int sftfs_unlink(const char *path);
 int sftfs_rmdir(const char *path);
 int sftfs_symlink(const char *target, const char *linkpath);
+int sftfs_rename(const char *oldpath, const char *newpath, unsigned int flags);
 int sftfs_opendir(const char *path, struct fuse_file_info *fi);
 int sftfs_readdir(const char *path, void *buf, fuse_fill_dir_t fill_dir, off_t off,
         struct fuse_file_info *fi, enum fuse_readdir_flags flags);

@@ -32,12 +32,12 @@ static inline size_t sftfs_str_capacity(sftfs_str_ro str)
     return str->capacity;
 }
 
-static inline const char *sftfs_str_c(sftfs_str str)
+static inline const char *sftfs_str_c_ro(sftfs_str_ro str)
 {
     return str->c;
 }
 
-static inline const char *sftfs_str_c_ro(sftfs_str_ro str)
+static inline const char *sftfs_str_c(sftfs_str str)
 {
     return str->c;
 }

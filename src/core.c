@@ -67,6 +67,13 @@ int sftfs_symlink(const char *target, const char *linkpath)
     return sftfs_endp_symlink(get_endp(), target, linkpath);
 }
 
+int sftfs_rename(const char *oldpath, const char *newpath, unsigned int flags)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_debug("oldpath=%s, newpath=%s\n", oldpath, newpath);
+    return sftfs_endp_rename(get_endp(), oldpath, newpath, flags);
+}
+
 int sftfs_opendir(const char *path, struct fuse_file_info *fi)
 {
     SFTFS_TRACE_FUNC
