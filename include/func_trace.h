@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "logging.h"
 
 #ifdef SFTFS_FUNCTION_TRACING

@@ -1,25 +1,19 @@
+option(SFTFS_FUNCTION_TRACING "Tracing specific function entries and exits." OFF)
+
 set(TARGET_NAME sftfs_common)
 add_library(${TARGET_NAME} OBJECT logging.c password_prompt.c str.c)
 target_include_directories(${TARGET_NAME} PUBLIC ${ROOT_INCLUDE_DIR})
-
-option(HAVE_FUNCTION_TRACING "Tracing specific function entries and exits." OFF)
-if (HAVE_FUNCTION_TRACING)
-    target_compile_definitions(${TARGET_NAME} PUBLIC SFTFS_FUNCTION_TRACING)
-endif ()
 target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror=format)
 
 set(TARGET_NAME sftfs_core)
 add_library(${TARGET_NAME} OBJECT core.c)
 target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
 target_link_libraries(${TARGET_NAME} PUBLIC -lfuse3)
-target_link_libraries(${TARGET_NAME} PRIVATE sftfs_common)
+target_link_libraries(${TARGET_NAME} PRIVATE sftfs_common sftfs_endp)
 
 set(TARGET_NAME sftfs_ssh)
 add_library(${TARGET_NAME} OBJECT ssh.c ssh_cli.c)
 target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
 target_link_libraries(${TARGET_NAME} PUBLIC -lssh)
 
-set(TARGET_NAME sftfs_endp)
-add_library(${TARGET_NAME} OBJECT endp/sftp.c)
-target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
-target_link_libraries(${TARGET_NAME} PRIVATE sftfs_ssh sftfs_common)
+add_subdirectory(endp)

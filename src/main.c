@@ -116,10 +116,10 @@ static int init_sftfs(struct sftfs_options *opts)
     if (! sftfs.ssh)
         return EXIT_FAILURE;
 
-    struct sftfs_endp_sftp_config config = {
+    struct sftfs_sftp_config config = {
         .work_dir = opts->path,
     };
-    sftfs.endp = sftfs_endp_init(sftfs.ssh, &config);
+    sftfs.endp = sftfs_sftp_init(sftfs.ssh, &config);
 
     if (! sftfs.endp) {
         ssh_free(sftfs.ssh);
@@ -133,7 +133,7 @@ static int init_sftfs(struct sftfs_options *opts)
 static void deinit_sftfs(void)
 {
     if (sftfs.endp) {
-        sftfs_endp_deinit(sftfs.endp);
+        sftfs_sftp_deinit(sftfs.endp);
         sftfs.endp = NULL;
     }
 

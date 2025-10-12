@@ -1,0 +1,25 @@
+option(SFTFS_SFTP "SFTP-based filesystem support." ON)
+
+set(TARGET_NAME sftfs_endp_sftp)
+if (SFTFS_SFTP)
+    add_library(${TARGET_NAME} STATIC sftp.c)
+    target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
+    target_link_libraries(${TARGET_NAME} PRIVATE sftfs_ssh sftfs_common)
+else ()
+    add_library(${TARGET_NAME} INTERFACE)
+endif ()
+
+option(SFTFS_CACHED "Cache filesystem I/O." ON)
+
+set(TARGET_NAME sftfs_endp_cached)
+if (SFTFS_CACHED)
+    add_library(${TARGET_NAME} STATIC cached.c)
+    target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
+    target_link_libraries(${TARGET_NAME} PRIVATE sftfs_common)
+else ()
+    add_library(${TARGET_NAME} INTERFACE)
+endif ()
+
+set(TARGET_NAME sftfs_endp)
+add_library(${TARGET_NAME} INTERFACE)
+target_link_libraries(${TARGET_NAME} INTERFACE sftfs_endp_sftp sftfs_endp_cached)

@@ -1,0 +1,5 @@
+#pragma once
+
+#cmakedefine SFTFS_FUNCTION_TRACING
+#cmakedefine SFTFS_SFTP
+#cmakedefine SFTFS_CACHED

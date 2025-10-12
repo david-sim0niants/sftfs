@@ -1,4 +1,3 @@
-#include "endp.h"
 #include "endp/sftp.h"
 
 #include "func_trace.h"
@@ -29,7 +28,7 @@ static inline sftp_session get_sftp(sftfs_endp endp)
     return get_handle(endp)->sftp;
 }
 
-static sftp_session sftfs_endp_init_sftp_session(ssh_session ssh)
+static sftp_session sftfs_sftp_init_session(ssh_session ssh)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = sftp_new(ssh);
@@ -48,7 +47,7 @@ static sftp_session sftfs_endp_init_sftp_session(ssh_session ssh)
     return sftp;
 }
 
-sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *config)
+sftfs_endp sftfs_sftp_init(ssh_session ssh, struct sftfs_sftp_config *config)
 {
     SFTFS_TRACE_FUNC
     if (! config->work_dir)
@@ -58,7 +57,7 @@ sftfs_endp sftfs_endp_init(ssh_session ssh, struct sftfs_endp_sftp_config *confi
     if (! handle)
         goto handle_alloc_failed;
 
-    handle->sftp = sftfs_endp_init_sftp_session(ssh);
+    handle->sftp = sftfs_sftp_init_session(ssh);
     if (! handle->sftp)
         goto sftp_init_failed;
 
@@ -96,7 +95,7 @@ handle_alloc_failed:
     return NULL;
 }
 
-void sftfs_endp_deinit(sftfs_endp endp_sftp)
+void sftfs_sftp_deinit(sftfs_endp endp_sftp)
 {
     SFTFS_TRACE_FUNC
     sftfs_str_delete(get_handle(endp_sftp)->curr_abs_path);
@@ -196,7 +195,7 @@ static inline sftp_file from_endp_file(sftfs_endp_file file)
     return (sftp_file)file.handle;
 }
 
-int sftfs_endp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, struct stat *stat)
+int sftfs_sftp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, struct stat *stat)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -216,7 +215,7 @@ int sftfs_endp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, 
     return 0;
 }
 
-int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t bufsiz)
+int sftfs_sftp_readlink(sftfs_endp endp, const char *path, char *buf, size_t bufsiz)
 {
     SFTFS_TRACE_FUNC
     assert(bufsiz > 0);
@@ -238,7 +237,7 @@ int sftfs_endp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
     return 0;
 }
 
-int sftfs_endp_mkdir(sftfs_endp endp, const char *path, mode_t mode)
+int sftfs_sftp_mkdir(sftfs_endp endp, const char *path, mode_t mode)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -252,7 +251,7 @@ int sftfs_endp_mkdir(sftfs_endp endp, const char *path, mode_t mode)
         return 0;
 }
 
-int sftfs_endp_unlink(sftfs_endp endp, const char *path)
+int sftfs_sftp_unlink(sftfs_endp endp, const char *path)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -266,7 +265,7 @@ int sftfs_endp_unlink(sftfs_endp endp, const char *path)
         return 0;
 }
 
-int sftfs_endp_rmdir(sftfs_endp endp, const char *path)
+int sftfs_sftp_rmdir(sftfs_endp endp, const char *path)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -280,7 +279,7 @@ int sftfs_endp_rmdir(sftfs_endp endp, const char *path)
         return 0;
 }
 
-int sftfs_endp_symlink(sftfs_endp endp, const char *target, const char *linkpath)
+int sftfs_sftp_symlink(sftfs_endp endp, const char *target, const char *linkpath)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -298,7 +297,7 @@ int sftfs_endp_symlink(sftfs_endp endp, const char *target, const char *linkpath
 #define RENAME_NOREPLACE (1 << 0)
 #endif
 
-int sftfs_endp_rename(sftfs_endp endp, const char *oldpath, const char *newpath, unsigned int flags)
+int sftfs_sftp_rename(sftfs_endp endp, const char *oldpath, const char *newpath, unsigned int flags)
 {
     SFTFS_TRACE_FUNC
 
@@ -352,7 +351,7 @@ oldpath_str_create_failed:
     return rc;
 }
 
-int sftfs_endp_chmod(sftfs_endp endp, const char *path, mode_t mode)
+int sftfs_sftp_chmod(sftfs_endp endp, const char *path, mode_t mode)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -366,7 +365,7 @@ int sftfs_endp_chmod(sftfs_endp endp, const char *path, mode_t mode)
         return 0;
 }
 
-int sftfs_endp_chown(sftfs_endp endp, const char *path, uid_t uid, gid_t gid)
+int sftfs_sftp_chown(sftfs_endp endp, const char *path, uid_t uid, gid_t gid)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -393,7 +392,7 @@ static inline sftp_dir from_endp_dir(sftfs_endp_dir dir)
     return (sftp_dir)dir.handle;
 }
 
-int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
+int sftfs_sftp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -409,7 +408,7 @@ int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
     return 0;
 }
 
-int sftfs_endp_readdir(sftfs_endp endp, const sftfs_endp_dir dir, int flags,
+int sftfs_sftp_readdir(sftfs_endp endp, const sftfs_endp_dir dir, int flags,
         sftfs_endp_readdir_callee callee, void *user_data)
 {
     SFTFS_TRACE_FUNC
@@ -438,14 +437,14 @@ int sftfs_endp_readdir(sftfs_endp endp, const sftfs_endp_dir dir, int flags,
         return ret_sftp_err(sftp);
 }
 
-int sftfs_endp_closedir(sftfs_endp endp, sftfs_endp_dir dir)
+int sftfs_sftp_closedir(sftfs_endp endp, sftfs_endp_dir dir)
 {
     SFTFS_TRACE_FUNC
     (void)endp;
     return sftp_closedir(from_endp_dir(dir)) == 0 ? 0 : -EIO;
 }
 
-int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, int access_flags)
+int sftfs_sftp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, int access_flags)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -461,7 +460,7 @@ int sftfs_endp_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, in
     return 0;
 }
 
-int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t size, off_t off)
+int sftfs_sftp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t size, off_t off)
 {
     SFTFS_TRACE_FUNC
     assert(off >= 0);
@@ -476,7 +475,7 @@ int sftfs_endp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t siz
     return rc;
 }
 
-int sftfs_endp_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, size_t size, off_t off)
+int sftfs_sftp_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, size_t size, off_t off)
 {
     SFTFS_TRACE_FUNC
     assert(off >= 0);
@@ -491,7 +490,7 @@ int sftfs_endp_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, siz
     return rc;
 }
 
-int sftfs_endp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv)
+int sftfs_sftp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv)
 {
     SFTFS_TRACE_FUNC
 
@@ -527,14 +526,14 @@ int sftfs_endp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv)
     return 0;
 }
 
-int sftfs_endp_close(sftfs_endp endp, sftfs_endp_file file)
+int sftfs_sftp_close(sftfs_endp endp, sftfs_endp_file file)
 {
     SFTFS_TRACE_FUNC
     (void)endp;
     return sftp_close(from_endp_file(file)) == 0 ? 0 : -EIO;
 }
 
-int sftfs_endp_access(sftfs_endp endp, const char *path, int mode)
+int sftfs_sftp_access(sftfs_endp endp, const char *path, int mode)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -563,7 +562,7 @@ int sftfs_endp_access(sftfs_endp endp, const char *path, int mode)
     return rc;
 }
 
-int sftfs_endp_create(sftfs_endp endp, const char *path, mode_t mode, sftfs_endp_file *file)
+int sftfs_sftp_create(sftfs_endp endp, const char *path, mode_t mode, sftfs_endp_file *file)
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
@@ -579,7 +578,7 @@ int sftfs_endp_create(sftfs_endp endp, const char *path, mode_t mode, sftfs_endp
     return 0;
 }
 
-int sftfs_endp_utimens(sftfs_endp endp, const char *path, const struct timespec tv[2])
+int sftfs_sftp_utimens(sftfs_endp endp, const char *path, const struct timespec tv[2])
 {
     SFTFS_TRACE_FUNC
     sftp_session sftp = get_sftp(endp);
