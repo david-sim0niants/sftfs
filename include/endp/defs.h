@@ -10,6 +10,8 @@ typedef void *sftfs_endp;
 
 typedef struct { uintptr_t handle; } sftfs_endp_dir;
 
+typedef struct { uintptr_t handle; } sftfs_endp_file;
+
 struct sftfs_endp_direntry {
     const char *name;
     struct stat stat;
@@ -21,5 +23,3 @@ enum sftfs_endp_readdir_flags {
     SFTFS_ENDP_READDIR_DEFAULT = 0,
     SFTFS_ENDP_READDIR_PLUS = 1,
 };
-
-typedef struct { uintptr_t handle; } sftfs_endp_file;

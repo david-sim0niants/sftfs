@@ -1,8 +1,8 @@
 #include "core.h"
-#include "endp.h"
-#include "endp/sftp.h"
 #include "logging.h"
 #include "ssh_cli.h"
+#include "endp/sftp_init.h"
+#include "endp/cached_init.h"
 
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
@@ -113,15 +113,19 @@ struct sftfs {
 static int init_sftfs(struct sftfs_options *opts)
 {
     sftfs.ssh = sftfs_ssh_cli(opts->user, opts->host, opts->port);
-    if (! sftfs.ssh)
+    if (NULL == sftfs.ssh)
         return EXIT_FAILURE;
 
-    struct sftfs_sftp_config config = {
+    struct sftfs_sftp_params sftp_params = {
+        .ssh = sftfs.ssh,
         .work_dir = opts->path,
     };
-    sftfs.endp = sftfs_sftp_init(sftfs.ssh, &config);
 
-    if (! sftfs.endp) {
+    struct sftfs_cached_params cached_params = {};
+
+    SFTFS_CACHED_INIT(sftfs.endp, &cached_params, struct sftfs_sftp, sftfs_sftp_construct, &sftp_params);
+
+    if (NULL == sftfs.endp) {
         ssh_free(sftfs.ssh);
         sftfs.ssh = NULL;
         return EXIT_FAILURE;
@@ -133,7 +137,7 @@ static int init_sftfs(struct sftfs_options *opts)
 static void deinit_sftfs(void)
 {
     if (sftfs.endp) {
-        sftfs_sftp_deinit(sftfs.endp);
+        SFTFS_CACHED_DEINIT(sftfs.endp, sftfs_sftp_destruct);
         sftfs.endp = NULL;
     }
 

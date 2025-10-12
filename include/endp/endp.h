@@ -1,12 +1,12 @@
 #pragma once
 
 #include "config.h"
-#include "endp/defs.h"
+#include "defs.h"
 
-#include "endp/none.h"
+#include "none.h"
 
 #ifdef SFTFS_SFTP 
-#include "endp/sftp.h"
+#include "sftp.h"
 #endif
 
 #ifdef SFTFS_CACHED

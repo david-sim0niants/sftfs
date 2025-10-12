@@ -2,16 +2,6 @@
 
 #include "endp/defs.h"
 
-#include <libssh/libssh.h>
-
-struct sftfs_sftp_config {
-    const char *work_dir;
-};
-
-sftfs_endp sftfs_sftp_init(ssh_session ssh, struct sftfs_sftp_config *config);
-
-void sftfs_sftp_deinit(sftfs_endp endp_sftp);
-
 int sftfs_sftp_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file, struct stat *stat);
 
 int sftfs_sftp_readlink(sftfs_endp endp, const char *path, char *buf, size_t bufsiz);

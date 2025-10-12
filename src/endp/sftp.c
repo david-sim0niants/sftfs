@@ -1,32 +1,14 @@
+#include "endp/sftp_init.h"
 #include "endp/sftp.h"
 
 #include "func_trace.h"
-#include "str.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
 #include <errno.h>
-#include <libssh/sftp.h>
 #include <fcntl.h>
-
-struct sftfs_endp_handle {
-    sftp_session sftp;
-    char *work_dir;
-    size_t base_dir_len;
-    sftfs_str curr_abs_path;
-};
-
-static inline struct sftfs_endp_handle *get_handle(sftfs_endp endp)
-{
-    return (struct sftfs_endp_handle *)endp;
-}
-
-static inline sftp_session get_sftp(sftfs_endp endp)
-{
-    return get_handle(endp)->sftp;
-}
 
 static sftp_session sftfs_sftp_init_session(ssh_session ssh)
 {
@@ -47,21 +29,19 @@ static sftp_session sftfs_sftp_init_session(ssh_session ssh)
     return sftp;
 }
 
-sftfs_endp sftfs_sftp_init(ssh_session ssh, struct sftfs_sftp_config *config)
+sftfs_endp sftfs_sftp_construct(struct sftfs_sftp *handle, struct sftfs_sftp_params *params)
 {
     SFTFS_TRACE_FUNC
-    if (! config->work_dir)
+    if (! params->work_dir)
         return NULL;
 
-    struct sftfs_endp_handle *handle = calloc(1, sizeof(struct sftfs_endp_handle));
-    if (! handle)
-        goto handle_alloc_failed;
+    memset(handle, 0, sizeof(*handle));
 
-    handle->sftp = sftfs_sftp_init_session(ssh);
+    handle->sftp = sftfs_sftp_init_session(params->ssh);
     if (! handle->sftp)
         goto sftp_init_failed;
 
-    handle->work_dir = sftp_canonicalize_path(handle->sftp, config->work_dir);
+    handle->work_dir = sftp_canonicalize_path(handle->sftp, params->work_dir);
     if (! handle->work_dir) {
         sftfs_fatal("Failed to canonicalize working directory: %d\n", sftp_get_error(handle->sftp));
         goto canonocalize_work_dir_failed;
@@ -90,18 +70,37 @@ current_path_alloc_failed:
 canonocalize_work_dir_failed:
     sftp_free(handle->sftp);
 sftp_init_failed:
-    free(handle);
-handle_alloc_failed:
     return NULL;
 }
 
-void sftfs_sftp_deinit(sftfs_endp endp_sftp)
+static inline struct sftfs_sftp *get_handle(sftfs_endp endp)
+{
+    return (struct sftfs_sftp *)endp;
+}
+
+static inline sftp_session get_sftp(sftfs_endp endp)
+{
+    return get_handle(endp)->sftp;
+}
+
+void sftfs_sftp_destruct(sftfs_endp endp)
 {
     SFTFS_TRACE_FUNC
-    sftfs_str_delete(get_handle(endp_sftp)->curr_abs_path);
-    ssh_string_free_char(get_handle(endp_sftp)->work_dir);
-    sftp_free(get_sftp(endp_sftp));
-    free((struct sftfs_endp_handle *)endp_sftp);
+    sftfs_str_delete(get_handle(endp)->curr_abs_path);
+    ssh_string_free_char(get_handle(endp)->work_dir);
+    sftp_free(get_sftp(endp));
+}
+
+sftfs_endp sftfs_sftp_init(struct sftfs_sftp_params *params)
+{
+    struct sftfs_sftp *handle = malloc(sizeof(*handle));
+    return handle ? sftfs_sftp_construct(handle, params) : NULL;
+}
+
+void sftfs_sftp_deinit(sftfs_endp endp)
+{
+    sftfs_sftp_destruct(endp);
+    free(endp);
 }
 
 static int to_errno(int err)
@@ -147,7 +146,7 @@ static inline int ret_sftp_err(sftp_session sftp)
 static const char *get_abs_path(sftfs_endp endp, const char *rel_path)
 {
     SFTFS_TRACE_FUNC
-    struct sftfs_endp_handle *handle = get_handle(endp);
+    struct sftfs_sftp *handle = get_handle(endp);
 
     sftfs_str abs_path = sftfs_str_resize(handle->curr_abs_path, handle->base_dir_len);
     if (! abs_path) {
