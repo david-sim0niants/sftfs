@@ -1,7 +1,7 @@
 option(SFTFS_FUNCTION_TRACING "Tracing specific function entries and exits." OFF)
 
 set(TARGET_NAME sftfs_common)
-add_library(${TARGET_NAME} OBJECT logging.c password_prompt.c str.c)
+add_library(${TARGET_NAME} OBJECT logging.c password_prompt.c)
 target_include_directories(${TARGET_NAME} PUBLIC ${ROOT_INCLUDE_DIR})
 target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror=format)
 
@@ -16,4 +16,5 @@ add_library(${TARGET_NAME} OBJECT ssh.c ssh_cli.c)
 target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
 target_link_libraries(${TARGET_NAME} PUBLIC -lssh)
 
+add_subdirectory(abs)
 add_subdirectory(endp)

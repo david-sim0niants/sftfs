@@ -1,7 +1,7 @@
 #pragma once
 
 #include "endp/defs.h"
-#include "str.h"
+#include "abs/str.h"
 
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>

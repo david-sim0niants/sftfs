@@ -26,7 +26,6 @@ int sftfs_getattr(const char *path, struct stat *stat, struct fuse_file_info *fi
 {
     SFTFS_TRACE_FUNC
     sftfs_debug("path=%s, fi=%p\n", path, fi);
-
     return sftfs_endp_getattr(get_endp(), path, wrap_file(fi ? fi->fh : 0), stat);
 }
 
@@ -34,7 +33,6 @@ int sftfs_readlink(const char *path, char *buf, size_t bufsiz)
 {
     SFTFS_TRACE_FUNC
     sftfs_debug("path=%s, buf=%p, bufsiz=%zu\n", path, buf, bufsiz);
-
     assert(bufsiz > 0);
     return sftfs_endp_readlink(get_endp(), path, buf, bufsiz);
 }
