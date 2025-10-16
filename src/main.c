@@ -204,7 +204,8 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    init_sftfs(&opts);
+    if (EXIT_SUCCESS != init_sftfs(&opts))
+        return EXIT_FAILURE;
 
     fuse_opt_add_arg(&args, "-s"); // use single-threaded mode
 

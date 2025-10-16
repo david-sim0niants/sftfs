@@ -13,6 +13,7 @@ typedef const struct sftfs_htable_s *sftfs_htable_ro;
 
 sftfs_htable sftfs_htable_create(size_t nr_buckets);
 void sftfs_htable_delete(sftfs_htable table);
+
 sftfs_htable sftfs_htable_insert(sftfs_htable table, size_t hash, void *data, size_t size);
 
 sftfs_htable_entry_link sftfs_htable_lookup(sftfs_htable table, size_t hash);
@@ -25,4 +26,10 @@ sftfs_htable sftfs_htable_remove(sftfs_htable table, sftfs_htable_entry_link ent
 sftfs_htable sftfs_htable_remove_hash(sftfs_htable table, size_t hash);
 sftfs_htable sftfs_htable_clear(sftfs_htable table);
 
-sftfs_htable sftfs_htable_size(sftfs_htable_ro size);
+size_t sftfs_htable_nr_buckets(sftfs_htable_ro table);
+size_t sftfs_htable_nr_entries(sftfs_htable_ro table);
+
+size_t sftfs_htable_entry_hash(sftfs_htable_entry_ro entry);
+
+void *sftfs_htable_entry_data(sftfs_htable_entry entry);
+const void *sftfs_htable_entry_data_ro(sftfs_htable_entry_ro entry);

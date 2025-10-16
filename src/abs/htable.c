@@ -194,3 +194,28 @@ sftfs_htable sftfs_htable_clear(sftfs_htable table)
     }
     return table;
 }
+
+size_t sftfs_htable_nr_buckets(sftfs_htable_ro table)
+{
+    return table->nr_buckets;
+}
+
+size_t sftfs_htable_nr_entries(sftfs_htable_ro table)
+{
+    return table->nr_entries;
+}
+
+size_t sftfs_htable_entry_hash(sftfs_htable_entry_ro entry)
+{
+    return entry->hash;
+}
+
+void *sftfs_htable_entry_data(sftfs_htable_entry entry)
+{
+    return entry->payload;
+}
+
+const void *sftfs_htable_entry_data_ro(sftfs_htable_entry_ro entry)
+{
+    return entry->payload;
+}
