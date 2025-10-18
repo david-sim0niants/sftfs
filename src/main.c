@@ -1,8 +1,11 @@
+#include "config.h"
 #include "core.h"
 #include "logging.h"
 #include "ssh_cli.h"
 #include "endp/sftp_init.h"
+#ifdef SFTFS_CACHED
 #include "endp/cached_init.h"
+#endif
 
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
@@ -121,9 +124,13 @@ static int init_sftfs(struct sftfs_options *opts)
         .work_dir = opts->path,
     };
 
+#ifdef SFTFS_CACHED
     struct sftfs_cached_params cached_params = {};
 
     SFTFS_CACHED_INIT(sftfs.endp, &cached_params, struct sftfs_sftp, sftfs_sftp_construct, &sftp_params);
+#else
+    sftfs.endp = sftfs_sftp_init(&sftp_params);
+#endif
 
     if (NULL == sftfs.endp) {
         ssh_free(sftfs.ssh);
@@ -137,7 +144,11 @@ static int init_sftfs(struct sftfs_options *opts)
 static void deinit_sftfs(void)
 {
     if (sftfs.endp) {
+#ifdef SFTFS_CACHED
         SFTFS_CACHED_DEINIT(sftfs.endp, sftfs_sftp_destruct);
+#else
+        sftfs_sftp_deinit(sftfs.endp);
+#endif
         sftfs.endp = NULL;
     }
 

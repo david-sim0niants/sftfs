@@ -1,8 +1,10 @@
 #pragma once
 
 #include "defs.h"
+#include "cached_fs.h"
 
 struct sftfs_cached {
+    struct sftfs_cached_fs_s fs;
     char base_endp[0];
 };
 

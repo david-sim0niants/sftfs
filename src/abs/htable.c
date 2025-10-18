@@ -17,22 +17,6 @@ struct sftfs_htable_s {
     sftfs_htable_entry buckets[0];
 };
 
-static sftfs_htable_entry create_entry(size_t hash, void *data, size_t size)
-{
-    sftfs_htable_entry entry = malloc(sizeof(*entry) + size);
-    if (! entry)
-        return NULL;
-    entry->next = NULL;
-    entry->hash = hash;
-    memcpy(entry->payload, data, size);
-    return entry;
-}
-
-static void delete_entry(sftfs_htable_entry entry)
-{
-    free(entry);
-}
-
 static size_t prime_lower_bound(size_t target)
 {
     int left = 0,
@@ -67,16 +51,32 @@ sftfs_htable sftfs_htable_create(size_t nr_buckets)
 
 void sftfs_htable_delete(sftfs_htable table)
 {
-    table = sftfs_htable_clear(table);
+    sftfs_htable_clear(&table);
     free(table);
 }
 
-static void insert_entry(sftfs_htable table, sftfs_htable_entry entry)
+static sftfs_htable_entry create_entry(size_t hash, size_t size)
 {
-    sftfs_htable_entry_link bucket = &table->buckets[entry->hash & table->nr_buckets];
+    sftfs_htable_entry entry = malloc(sizeof(*entry) + size);
+    if (! entry)
+        return NULL;
+    entry->next = NULL;
+    entry->hash = hash;
+    return entry;
+}
+
+static void delete_entry(sftfs_htable_entry entry)
+{
+    free(entry);
+}
+
+static sftfs_htable_entry_link insert_entry(sftfs_htable table, sftfs_htable_entry entry)
+{
+    sftfs_htable_entry_link bucket = &table->buckets[entry->hash % table->nr_buckets];
     entry->next = *bucket;
     *bucket = entry;
     ++table->nr_entries;
+    return bucket;
 }
 
 static sftfs_htable_entry extract_entry(sftfs_htable table, sftfs_htable_entry_link entry_link)
@@ -91,43 +91,51 @@ static sftfs_htable_entry extract_entry(sftfs_htable table, sftfs_htable_entry_l
     return entry;
 }
 
-static void rehash(sftfs_htable from, sftfs_htable to)
+static void migrate(sftfs_htable from, sftfs_htable to)
 {
     for (size_t i = 0; i < from->nr_buckets; ++i) {
         sftfs_htable_entry_link entry_link = &from->buckets[i];
-        sftfs_htable_entry_link next_entry_link;
-
-        for (; *entry_link; entry_link = next_entry_link) {
-            next_entry_link = &(*entry_link)->next;
+        while (*entry_link)
             insert_entry(to, extract_entry(from, entry_link));
-        }
     }
 }
 
 static sftfs_htable extend_and_rehash(sftfs_htable table)
 {
     sftfs_htable new_table = sftfs_htable_create(table->nr_buckets * 2);
-    rehash(table, new_table);
+    migrate(table, new_table);
     sftfs_htable_delete(table);
     return new_table;
 }
 
-sftfs_htable sftfs_htable_insert(sftfs_htable table, size_t hash, void *data, size_t size)
+sftfs_htable_entry_link sftfs_htable_new_entry(sftfs_htable_ptr table_ptr, size_t hash, size_t size)
 {
-    sftfs_htable_entry entry = create_entry(hash, data, size);
+    sftfs_htable table = *table_ptr;
+
+    sftfs_htable_entry entry = create_entry(hash, size);
     if (NULL == entry)
         return NULL;
 
-    if (table->nr_buckets / 2 + table->nr_buckets / 4 < table->nr_entries)
+    if ((table->nr_buckets / 2 + table->nr_buckets) / 2 < table->nr_entries)
         table = extend_and_rehash(table);
 
     if (NULL == table) {
         delete_entry(entry);
-        return table;
+        return NULL;
     }
 
-    insert_entry(table, entry);
-    return table;
+    *table_ptr = table;
+    return insert_entry(table, entry);
+}
+
+sftfs_htable_entry_link sftfs_htable_insert(
+        sftfs_htable_ptr table, size_t hash,
+        const void *data, size_t size)
+{
+    sftfs_htable_entry_link entry_link = sftfs_htable_new_entry(table, hash, size);
+    if (*entry_link)
+        memcpy(entry_link[0]->payload, data, size);
+    return entry_link;
 }
 
 #define FIND_ENTRY_WITH_HASH(entry_link, hash) \
@@ -165,34 +173,60 @@ sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_link_r
     return entry_link;
 }
 
-sftfs_htable sftfs_htable_remove(sftfs_htable table, sftfs_htable_entry_link entry_link)
+sftfs_htable_entry_link sftfs_htable_get_bucket(sftfs_htable table, size_t index)
 {
-    delete_entry(extract_entry(table, entry_link));
-    return table;
+    return &table->buckets[index];
 }
 
-sftfs_htable sftfs_htable_remove_hash(sftfs_htable table, size_t hash)
+sftfs_htable_entry_link_ro sftfs_htable_get_bucket_ro(sftfs_htable_ro table, size_t index)
 {
-    sftfs_htable_entry_link entry_link = sftfs_htable_lookup(table, hash);
+    return &table->buckets[index];
+}
+
+sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable_entry_link entry_link)
+{
+    return &entry_link[0]->next;
+}
+
+sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_entry_link_ro entry_link)
+{
+    return &entry_link[0]->next;
+}
+
+void sftfs_htable_remove(sftfs_htable_ptr table, sftfs_htable_entry_link entry_link)
+{
+    delete_entry(extract_entry(*table, entry_link));
+}
+
+void sftfs_htable_remove_hash(sftfs_htable_ptr table, size_t hash)
+{
+    sftfs_htable_entry_link entry_link = sftfs_htable_lookup(*table, hash);
     if (*entry_link) {
         sftfs_htable_entry_link next_entry_link = sftfs_htable_lookup_next(entry_link);
-        table = sftfs_htable_remove(table, entry_link);
+        sftfs_htable_remove(table, entry_link);
         entry_link = next_entry_link;
     }
-    return table;
 }
 
-sftfs_htable sftfs_htable_clear(sftfs_htable table)
+void sftfs_htable_clear(sftfs_htable_ptr table)
 {
-    for (size_t i = 0; i < table->nr_buckets; ++i) {
-        sftfs_htable_entry entry = table->buckets[i];
+    for (size_t i = 0; i < (*table)->nr_buckets; ++i) {
+        sftfs_htable_entry entry = (*table)->buckets[i];
         while (entry) {
             sftfs_htable_entry next_entry = entry->next;
             delete_entry(entry);
             entry = next_entry;
         }
     }
-    return table;
+}
+
+sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table, size_t new_hash,
+        sftfs_htable_entry_link entry_link)
+{
+    sftfs_htable_entry entry = extract_entry(*table, entry_link);
+    assert(entry);
+    entry->hash = new_hash;
+    return insert_entry(*table, entry);
 }
 
 size_t sftfs_htable_nr_buckets(sftfs_htable_ro table)
