@@ -13,3 +13,8 @@ add_executable(${TARGET_NAME} src/main.c)
 target_link_libraries(${TARGET_NAME} PRIVATE sftfs_core sftfs_common sftfs_ssh)
 
 configure_file(${ROOT_INCLUDE_DIR}/config.h.in ${ROOT_INCLUDE_DIR}/config.h)
+
+option(HAVE_TESTS "Have tests?" OFF)
+if (HAVE_TESTS)
+    add_subdirectory(test)
+endif ()
