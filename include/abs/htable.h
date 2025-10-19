@@ -23,8 +23,8 @@ sftfs_htable_entry_link sftfs_htable_insert(sftfs_htable_ptr table,
 sftfs_htable_entry_link sftfs_htable_lookup(sftfs_htable table, size_t hash);
 sftfs_htable_entry_link_ro sftfs_htable_lookup_ro(sftfs_htable_ro table, size_t hash);
 
-sftfs_htable_entry_link sftfs_htable_lookup_next(sftfs_htable_entry_link entry_link);
-sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_link_ro entry_link);
+sftfs_htable_entry_link sftfs_htable_lookup_next(sftfs_htable_entry entry);
+sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_ro entry);
 
 sftfs_htable_entry_link sftfs_htable_get_bucket(sftfs_htable table, size_t index);
 sftfs_htable_entry_link_ro sftfs_htable_get_bucket_ro(sftfs_htable_ro table, size_t index);

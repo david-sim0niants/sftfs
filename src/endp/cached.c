@@ -91,7 +91,7 @@ static inline sftfs_cached_file_ro view_file_ro(sftfs_htable_entry_ro entry)
 static sftfs_htable_entry_link find_file(sftfs_htable file_table, const char *path)
 {
     sftfs_htable_entry_link entry_link = sftfs_htable_lookup(file_table, fnv1a_hash(path));
-    for (; *entry_link; entry_link = sftfs_htable_lookup_next(entry_link))
+    for (; *entry_link; entry_link = sftfs_htable_lookup_next(*entry_link))
         if (str_eq(view_file(*entry_link)->path, path))
             break;
     return entry_link;
@@ -102,7 +102,7 @@ static sftfs_htable_entry_link
 {
     sftfs_htable_entry_link entry_link =
         sftfs_htable_new_entry(file_table, fnv1a_hash(path), sizeof(struct sftfs_cached_file_s));
-    if (*entry_link) {
+    if (entry_link && *entry_link) {
         view_file(*entry_link)->path = sftfs_str_create(path, strlen(path));
         view_file(*entry_link)->attr = *attr;
     }

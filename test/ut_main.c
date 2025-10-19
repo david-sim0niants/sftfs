@@ -152,6 +152,7 @@ int main(int argc, char *argv[])
         ut_colorize();
     else
         ut_uncolorize();
-    atexit(ut_unregister_tests);
-    return ut_run(&ut_root);
+    int rc = ut_run(&ut_root);
+    ut_unregister_tests();
+    return rc;
 }

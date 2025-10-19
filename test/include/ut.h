@@ -47,17 +47,28 @@ const char *ut_color(ut_color_t color);
     if ((prev_ut_rc = ut_rc, ut_rc = (__VA_ARGS__) ? UT_PASS : UT_FAIL)) {\
         if (prev_ut_rc != UT_PASS && ut_rc == UT_PASS) \
             ut_rc = prev_ut_rc; \
-        ut_report("%sExpectation failed:%s %s\n", \
-                ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), #__VA_ARGS__); \
+        ut_report("%sExpectation failed%s at %s:%d %s\n", \
+                ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), \
+                __FILE__, __LINE__, #__VA_ARGS__); \
     } \
 } while (0)
 
 #define UT_ASSERT(...) do { \
     if ((prev_ut_rc = ut_rc, ut_rc = (__VA_ARGS__) ? UT_PASS : UT_FAIL)) {\
-        ut_report("%sAssertion failed:%s %s\n", \
-                ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), #__VA_ARGS__); \
+        ut_report("%sAssertion failed%s at %s:%d %s\n", \
+                ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), \
+                __FILE__, __LINE__, #__VA_ARGS__); \
         goto ut_final; \
     } \
     if (prev_ut_rc != UT_PASS && ut_rc == UT_PASS) \
         ut_rc = prev_ut_rc; \
+} while (0)
+
+#define UT_HARD_ASSERT(...) do { \
+    if (!(__VA_ARGS__)) {\
+        ut_report("%sHard assertion failed%s at %s:%d %s\n", \
+                ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), \
+                __FILE__, __LINE__, #__VA_ARGS__); \
+        abort(); \
+    } \
 } while (0)

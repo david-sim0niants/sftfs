@@ -133,7 +133,7 @@ sftfs_htable_entry_link sftfs_htable_insert(
         const void *data, size_t size)
 {
     sftfs_htable_entry_link entry_link = sftfs_htable_new_entry(table, hash, size);
-    if (*entry_link)
+    if (entry_link && *entry_link)
         memcpy(entry_link[0]->payload, data, size);
     return entry_link;
 }
@@ -157,18 +157,18 @@ sftfs_htable_entry_link_ro sftfs_htable_lookup_ro(sftfs_htable_ro table, size_t 
     return entry_link;
 }
 
-sftfs_htable_entry_link sftfs_htable_lookup_next(sftfs_htable_entry_link entry_link)
+sftfs_htable_entry_link sftfs_htable_lookup_next(sftfs_htable_entry entry)
 {
-    const size_t hash = (*entry_link)->hash;
-    entry_link = &(*entry_link)->next;
+    const size_t hash = entry->hash;
+    sftfs_htable_entry_link entry_link = &entry->next;
     FIND_ENTRY_WITH_HASH(entry_link, hash);
     return entry_link;
 }
 
-sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_link_ro entry_link)
+sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_ro entry)
 {
-    const size_t hash = (*entry_link)->hash;
-    entry_link = &(*entry_link)->next;
+    const size_t hash = entry->hash;
+    sftfs_htable_entry_link_ro entry_link = &entry->next;
     FIND_ENTRY_WITH_HASH(entry_link, hash);
     return entry_link;
 }
@@ -201,11 +201,8 @@ void sftfs_htable_remove(sftfs_htable_ptr table, sftfs_htable_entry_link entry_l
 void sftfs_htable_remove_hash(sftfs_htable_ptr table, size_t hash)
 {
     sftfs_htable_entry_link entry_link = sftfs_htable_lookup(*table, hash);
-    if (*entry_link) {
-        sftfs_htable_entry_link next_entry_link = sftfs_htable_lookup_next(entry_link);
+    while (*entry_link)
         sftfs_htable_remove(table, entry_link);
-        entry_link = next_entry_link;
-    }
 }
 
 void sftfs_htable_clear(sftfs_htable_ptr table)
