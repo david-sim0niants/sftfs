@@ -465,13 +465,30 @@ int sftfs_sftp_read(sftfs_endp endp, sftfs_endp_file file, char *buf, size_t siz
     assert(off >= 0);
     sftp_session sftp = get_sftp(endp);
 
-    if (sftp_seek64(from_endp_file(file), off) < 0)
-        ret_sftp_err(sftp);
+    size_t bytes_read = 0;
 
-    int rc = sftp_read(from_endp_file(file), buf, size);
-    if (rc < 0)
-        rc = ret_sftp_err(sftp);
-    return rc;
+    while (bytes_read < size) {
+        const uint64_t curr_off = off + bytes_read;
+        const size_t size_left = size - bytes_read;
+
+        if (sftp_seek64(from_endp_file(file), curr_off) < 0)
+            ret_sftp_err(sftp);
+
+        ssize_t last_bytes_read = sftp_read(from_endp_file(file), buf + bytes_read, size_left);
+        sftfs_trace("last_bytes_read=%zu\n", last_bytes_read);
+
+        if (last_bytes_read < 0)
+            return ret_sftp_err(sftp);
+        else if (0 == last_bytes_read)
+            break;
+        else if (size_left <= (size_t)last_bytes_read)
+            last_bytes_read = size_left;
+
+        bytes_read += last_bytes_read;
+        sftfs_trace("bytes_read=%zu\n", bytes_read);
+    }
+
+    return bytes_read;
 }
 
 int sftfs_sftp_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, size_t size, off_t off)
@@ -480,13 +497,30 @@ int sftfs_sftp_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, siz
     assert(off >= 0);
     sftp_session sftp = get_sftp(endp);
 
-    if (sftp_seek64(from_endp_file(file), off) < 0)
-        ret_sftp_err(sftp);
+    size_t bytes_written = 0;
 
-    int rc = sftp_write(from_endp_file(file), buf, size);
-    if (rc < 0)
-        rc = ret_sftp_err(sftp);
-    return rc;
+    while (bytes_written < size) {
+        const uint64_t curr_off = off + bytes_written;
+        const size_t size_left = size - bytes_written;
+
+        if (sftp_seek64(from_endp_file(file), curr_off) < 0)
+            ret_sftp_err(sftp);
+
+        ssize_t last_bytes_written = sftp_write(from_endp_file(file), buf + bytes_written, size_left);
+        sftfs_trace("last_bytes_written=%zu\n", last_bytes_written);
+
+        if (last_bytes_written < 0)
+            return ret_sftp_err(sftp);
+        else if (0 == last_bytes_written)
+            break;
+        else if (size_left <= (size_t)last_bytes_written)
+            last_bytes_written = size_left;
+
+        bytes_written += last_bytes_written;
+        sftfs_trace("bytes_written=%zu\n", bytes_written);
+    }
+
+    return bytes_written;
 }
 
 int sftfs_sftp_statfs(sftfs_endp endp, const char *path, struct statvfs *statv)
