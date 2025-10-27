@@ -29,12 +29,24 @@ sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_ro ent
 sftfs_htable_entry_link sftfs_htable_get_bucket(sftfs_htable table, size_t index);
 sftfs_htable_entry_link_ro sftfs_htable_get_bucket_ro(sftfs_htable_ro table, size_t index);
 
-sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable_entry_link entry_link);
-sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_entry_link_ro entry_link);
+sftfs_htable_entry_link sftfs_htable_first_entry(sftfs_htable table);
+sftfs_htable_entry_link_ro sftfs_htable_first_entry_ro(sftfs_htable_ro table);
+
+sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable table, sftfs_htable_entry entry_link);
+sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_ro table, sftfs_htable_entry_ro entry);
+
+sftfs_htable_entry_link sftfs_htable_find_entry_link(sftfs_htable table, sftfs_htable_entry_ro entry);
+sftfs_htable_entry_link_ro
+    sftfs_htable_find_entry_link_ro(sftfs_htable_ro table, sftfs_htable_entry_ro entry);
 
 void sftfs_htable_remove(sftfs_htable_ptr table, sftfs_htable_entry_link entry_link);
 void sftfs_htable_remove_hash(sftfs_htable_ptr table, size_t hash);
 void sftfs_htable_clear(sftfs_htable_ptr table);
+
+static inline void sftfs_htable_find_and_remove(sftfs_htable_ptr table, sftfs_htable_entry entry)
+{
+    sftfs_htable_remove(table, sftfs_htable_find_entry_link(*table, entry));
+}
 
 sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table, size_t new_hash,
         sftfs_htable_entry_link entry_link);

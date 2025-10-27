@@ -183,14 +183,79 @@ sftfs_htable_entry_link_ro sftfs_htable_get_bucket_ro(sftfs_htable_ro table, siz
     return &table->buckets[index];
 }
 
-sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable_entry_link entry_link)
+sftfs_htable_entry_link sftfs_htable_first_entry(sftfs_htable table)
 {
-    return &entry_link[0]->next;
+    for (size_t i = 0; i < table->nr_buckets; ++i)
+        if (table->buckets[i])
+            return &table->buckets[i];
+    return NULL;
 }
 
-sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_entry_link_ro entry_link)
+sftfs_htable_entry_link_ro sftfs_htable_first_entry_ro(sftfs_htable_ro table)
 {
-    return &entry_link[0]->next;
+    for (size_t i = 0; i < table->nr_buckets; ++i)
+        if (table->buckets[i])
+            return &table->buckets[i];
+    return NULL;
+}
+
+sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable table, sftfs_htable_entry entry)
+{
+    sftfs_htable_entry_link entry_link = NULL;
+    if (entry) {
+        entry_link = &entry->next;
+        if (*entry_link)
+            return entry_link;
+    }
+
+    size_t index = 0;
+    if (entry_link)
+        index = (entry_link[0]->hash % table->nr_buckets) + 1;
+
+    for (; index < table->nr_buckets; ++index)
+        if (table->buckets[index])
+            return &table->buckets[index];
+
+    return NULL;
+}
+
+sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_ro table, sftfs_htable_entry_ro entry)
+{
+    sftfs_htable_entry_link_ro entry_link = NULL;
+    if (entry) {
+        entry_link = &entry->next;
+        if (*entry_link)
+            return entry_link;
+    }
+
+    size_t index = 0;
+    if (entry_link)
+        index = (entry_link[0]->hash % table->nr_buckets) + 1;
+
+    for (; index < table->nr_buckets; ++index)
+        if (table->buckets[index])
+            return &table->buckets[index];
+
+    return NULL;
+}
+
+sftfs_htable_entry_link sftfs_htable_find_entry_link(sftfs_htable table, sftfs_htable_entry_ro entry)
+{
+    sftfs_htable_entry_link entry_link = sftfs_htable_lookup(table, entry->hash);
+    for (; *entry_link; entry_link = sftfs_htable_lookup_next(*entry_link))
+        if (*entry_link == entry)
+            break;
+    return entry_link;
+}
+
+sftfs_htable_entry_link_ro
+    sftfs_htable_find_entry_link_ro(sftfs_htable_ro table, sftfs_htable_entry_ro entry)
+{
+    sftfs_htable_entry_link_ro entry_link = sftfs_htable_lookup_ro(table, entry->hash);
+    for (; *entry_link; entry_link = sftfs_htable_lookup_next_ro(*entry_link))
+        if (*entry_link == entry)
+            break;
+    return entry_link;
 }
 
 void sftfs_htable_remove(sftfs_htable_ptr table, sftfs_htable_entry_link entry_link)

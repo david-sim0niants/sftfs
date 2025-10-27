@@ -17,4 +17,5 @@ target_include_directories(${TARGET_NAME} PRIVATE ${ROOT_INCLUDE_DIR})
 target_link_libraries(${TARGET_NAME} PUBLIC -lssh)
 
 add_subdirectory(abs)
+add_subdirectory(cache)
 add_subdirectory(endp)
