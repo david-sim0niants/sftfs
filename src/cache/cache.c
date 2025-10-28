@@ -84,10 +84,22 @@ static inline bool unlisted_entry(const sftfs_cache_entry *entry)
     return entry->node.next == NULL && entry->node.prev == NULL;
 }
 
-void sftfs_cache_free(struct sftfs_cache *cache, sftfs_cache_entry *entry)
+int sftfs_cache_free(struct sftfs_cache *cache, sftfs_cache_entry *entry)
 {
+    if (! entry)
+        return SFTFS_CACHE_OK;
+
     assert(unlisted_entry(entry));
-    sftfs_htable_find_and_remove(&cache->table, to_htable_entry(entry));
+
+    sftfs_htable_entry_link entry_link =
+        sftfs_htable_find_entry_link(cache->table, to_htable_entry(entry));
+
+    if (! entry_link || !*entry_link)
+        return SFTFS_CACHE_UNEXPECTED_ENTRY;
+
+    sftfs_htable_remove(&cache->table, entry_link);
+    evict_invalid_lru_entries(cache);
+    return SFTFS_CACHE_OK;
 }
 
 sftfs_cache_entry *sftfs_cache_take(struct sftfs_cache *cache, const sftfs_cache_entry *entry_ro)
@@ -98,38 +110,60 @@ sftfs_cache_entry *sftfs_cache_take(struct sftfs_cache *cache, const sftfs_cache
         return NULL;
     sftfs_cache_entry *entry = from_htable_entry(*entry_link);
     sftfs_cache_list_remove(&cache->list, &entry->node);
+
+    evict_invalid_lru_entries(cache);
     return entry;
 }
 
-void sftfs_cache_give(struct sftfs_cache *cache, sftfs_cache_entry *entry)
+int sftfs_cache_give(struct sftfs_cache *cache, sftfs_cache_entry *entry)
 {
     evict_invalid_lru_entries(cache);
+
+    if (! sftfs_cache_contains_unlisted(cache, entry))
+        return SFTFS_CACHE_UNEXPECTED_ENTRY;
     sftfs_cache_list_insert(&cache->list, &entry->node);
+    return SFTFS_CACHE_OK;
 }
 
-void sftfs_cache_invalidate(struct sftfs_cache *cache, sftfs_cache_entry *entry)
+int sftfs_cache_invalidate(struct sftfs_cache *cache, const sftfs_cache_entry *entry_ro)
 {
-    assert(! unlisted_entry(entry));
-    sftfs_cache_list_remove(&cache->list, &entry->node);
-    sftfs_cache_free(cache, entry);
-    evict_invalid_lru_entries(cache);
+    return sftfs_cache_free(cache, sftfs_cache_take(cache, entry_ro));
+}
+
+static sftfs_cache_entry *find_listed_entry(sftfs_htable_entry_link_ro entry_link)
+{
+    while (entry_link && *entry_link) {
+        sftfs_cache_entry *entry = from_htable_entry(*entry_link);
+        if (! unlisted_entry(entry))
+            return entry;
+        entry_link = sftfs_htable_lookup_next_ro(*entry_link);
+    }
+    return NULL;
 }
 
 const sftfs_cache_entry *sftfs_cache_peek(struct sftfs_cache *cache, size_t hash)
 {
     evict_invalid_lru_entries(cache);
-    sftfs_htable_entry_link_ro entry_link = sftfs_htable_lookup_ro(cache->table, hash);
-    if (! entry_link || !*entry_link)
-        return NULL;
-    return from_htable_entry(*entry_link);
+    return find_listed_entry(sftfs_htable_lookup_ro(cache->table, hash));
 }
 
 const sftfs_cache_entry *sftfs_cache_peek_next(const sftfs_cache_entry *entry)
 {
-    sftfs_htable_entry_link_ro entry_link = sftfs_htable_lookup_next_ro(to_htable_entry_ro(entry));
-    if (! entry_link || !*entry_link)
-        return NULL;
-    return from_htable_entry(*entry_link);
+    return find_listed_entry(sftfs_htable_lookup_next_ro(to_htable_entry_ro(entry)));
+}
+
+bool sftfs_cache_contains(const struct sftfs_cache *cache, const sftfs_cache_entry *entry)
+{
+    sftfs_htable_entry_link_ro entry_link =
+        sftfs_htable_find_entry_link_ro(cache->table, to_htable_entry_ro(entry));
+    return entry_link && *entry_link;
+}
+
+bool sftfs_cache_contains_unlisted(const struct sftfs_cache *cache, const sftfs_cache_entry *entry)
+{
+    sftfs_htable_entry_link_ro entry_link =
+        sftfs_htable_find_entry_link_ro(cache->table, to_htable_entry_ro(entry));
+    return entry_link && *entry_link && unlisted_entry(from_htable_entry(*entry_link));
 }
 
 void sftfs_cache_clear(struct sftfs_cache *cache)
