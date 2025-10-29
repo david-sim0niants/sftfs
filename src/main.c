@@ -125,7 +125,10 @@ static int init_sftfs(struct sftfs_options *opts)
     };
 
 #ifdef SFTFS_CACHED
-    struct sftfs_cached_params cached_params = {};
+    struct sftfs_cached_params cached_params = {
+        .clock = time,
+        .ttl = 1, // TODO: time returns in seconds and time_t stores in seconds, change to milliseconds usage
+    };
 
     SFTFS_CACHED_INIT(sftfs.endp, &cached_params, struct sftfs_sftp, sftfs_sftp_construct, &sftp_params);
 #else

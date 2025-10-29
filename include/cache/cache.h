@@ -32,6 +32,7 @@ struct sftfs_cache_config {
 enum {
     SFTFS_CACHE_OK = 0,
     SFTFS_CACHE_UNEXPECTED_ENTRY,
+    SFTFS_CACHE_ERROR_MAX = SFTFS_CACHE_UNEXPECTED_ENTRY + 1,
 };
 
 struct sftfs_cache *sftfs_cache_construct(struct sftfs_cache *cache,

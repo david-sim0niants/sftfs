@@ -127,7 +127,10 @@ int sftfs_cache_give(struct sftfs_cache *cache, sftfs_cache_entry *entry)
 
 int sftfs_cache_invalidate(struct sftfs_cache *cache, const sftfs_cache_entry *entry_ro)
 {
-    return sftfs_cache_free(cache, sftfs_cache_take(cache, entry_ro));
+    sftfs_cache_entry *entry = sftfs_cache_take(cache, entry_ro);
+    if (is_on_evict_set(&cache->on_evict))
+        call_on_evict(&cache->on_evict, entry);
+    return sftfs_cache_free(cache, entry);
 }
 
 static sftfs_cache_entry *find_listed_entry(sftfs_htable_entry_link_ro entry_link)

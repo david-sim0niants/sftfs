@@ -1,14 +1,17 @@
 #pragma once
 
 #include "defs.h"
-#include "cached_fs.h"
+#include "cache/cache.h"
 
-struct sftfs_cached {
-    struct sftfs_cached_fs_s fs;
+struct sftfs_cached_endp {
+    struct sftfs_cache attr_cache;
     char base_endp[0];
 };
 
-struct sftfs_cached_params {};
+struct sftfs_cached_params {
+    sftfs_cache_clock_t clock;
+    time_t ttl;
+};
 
 sftfs_endp sftfs_cached_init(size_t base_endp_size, struct sftfs_cached_params *params);
 
@@ -20,6 +23,5 @@ void sftfs_cached_deinit(sftfs_endp endp);
 
 #define SFTFS_CACHED_DEINIT(endp, base_endp_dtor) (base_endp_dtor(endp), sftfs_cached_deinit(endp))
 
-sftfs_endp sftfs_cached_construct(struct sftfs_cached *handle, struct sftfs_cached_params *params);
-
+sftfs_endp sftfs_cached_construct(struct sftfs_cached_endp *handle, struct sftfs_cached_params *params);
 void sftfs_cached_destruct(sftfs_endp endp);

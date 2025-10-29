@@ -3,6 +3,7 @@
 #include "abs/str.h"
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 struct file_cache_entry {
@@ -26,20 +27,33 @@ static inline void destruct_file(struct file_cache_entry *file)
     file->path = NULL;
 }
 
-static void on_evict(void *entry_data, void *user_data)
+static void on_evict_file_without_data_dtor(void *entry_data, void *user_data)
 {
     (void)user_data;
     destruct_file((struct file_cache_entry *)entry_data);
 }
 
-void sftfs_cache_file_construct(struct sftfs_cache *cache, struct sftfs_cache_file_config *config)
+static void on_evict_file_with_data_dtor(void *entry_data, void *user_data)
+{
+    struct file_cache_entry *file_entry = entry_data;
+    void (*file_data_dtor)(void *) = user_data;
+    file_data_dtor(file_entry->data);
+    destruct_file(file_entry);
+}
+
+struct sftfs_cache *sftfs_cache_file_construct(
+        struct sftfs_cache *cache, struct sftfs_cache_file_config *config)
 {
     struct sftfs_cache_config core_config = {
         .list = config->list,
-        .on_evict = {on_evict, NULL},
+        .on_evict = config->file_data_dtor
+            ? (struct sftfs_cache_on_evict)
+                {on_evict_file_with_data_dtor, (void *)config->file_data_dtor}
+            : (struct sftfs_cache_on_evict)
+                {on_evict_file_without_data_dtor, NULL},
         .entry_data_size = sizeof(struct file_cache_entry) + config->file_data_size,
     };
-    sftfs_cache_construct(cache, &core_config);
+    return sftfs_cache_construct(cache, &core_config);
 }
 
 void sftfs_cache_file_destruct(struct sftfs_cache *cache)

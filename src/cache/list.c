@@ -47,6 +47,8 @@ void sftfs_cache_list_remove(struct sftfs_cache_list *list, struct sftfs_cache_l
 
 struct sftfs_cache_list_node *sftfs_cache_list_evict_invalid_lru(struct sftfs_cache_list *list)
 {
+    if (sftfs_cache_list_empty(list))
+        return NULL;
     bool lru_invalid = list->lru->mod_time + list->config.ttl <= list->config.clock();
     if (lru_invalid) {
         struct sftfs_cache_list_node *evicted = list->lru;
