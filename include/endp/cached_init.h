@@ -10,7 +10,7 @@ struct sftfs_cached_endp {
 
 struct sftfs_cached_params {
     sftfs_cache_clock_t clock;
-    time_t ttl;
+    sftfs_cache_time_t ttl;
 };
 
 sftfs_endp sftfs_cached_init(size_t base_endp_size, struct sftfs_cached_params *params);

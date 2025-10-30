@@ -94,6 +94,21 @@ UT_FINAL:
     UT_END;
 }
 
+static int clear_succeeds(void)
+{
+    struct fixture f = create_fixture(rand() % 200 + 100);
+    sftfs_htable_ptr ht = &f.table;
+
+    UT_BEGIN;
+
+    sftfs_htable_clear(ht);
+    UT_ASSERT(sftfs_htable_nr_entries(*ht) == 0);
+
+UT_FINAL:
+    delete_fixture(f);
+    UT_END;
+}
+
 UT_ON_INIT
 {
     srand(42);
@@ -101,6 +116,7 @@ UT_ON_INIT
         UT_LEAF_TEST("lookup() looks up an existing entry", lookup_succeeds),
         UT_LEAF_TEST("remove() with lookup() removes an existing entry", remove_succeeds),
         UT_LEAF_TEST("remove_hash() removes all entries with same hash", remove_hash_succeeds),
+        UT_LEAF_TEST("clear() removes all entries", clear_succeeds),
     };
     static struct ut_test test_suite = { "htable ", NULL, tests, sizeof(tests) / sizeof(tests[0]) };
     ut_register_tests(&test_suite, 1);

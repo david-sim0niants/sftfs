@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdlib.h>
 
 struct ut_test {
     const char *name;
@@ -33,20 +34,25 @@ const char *ut_color(ut_color_t color);
 #define UT_CONCAT(x, y) UT_CONCAT_IMPL(x, y)
 #define UT_ON_INIT void __attribute__((constructor)) UT_CONCAT(ut_on_init, __LINE__)(void)
 
-#define UT_BEGIN int ut_rc = UT_PASS, prev_ut_rc = UT_PASS; (void)ut_rc; (void)prev_ut_rc;
+struct ut_test_state {
+    int rc, prev_rc;
+};
+
+#define UT_BEGIN struct ut_test_state ut_test_state = {.rc = UT_PASS, .prev_rc = UT_PASS};
 
 #define UT_FINAL ut_final
 
-#define UT_END return (ut_rc)
+#define UT_END return (ut_test_state.rc);
 
-#define UT_FAILING (ut_rc != UT_PASS)
-#define UT_PASSING (ut_rc == UT_PASS)
-#define UT_JUST_FAILED (ut_rc == UT_FAIL && prev_ut_rc == UT_PASS)
+#define UT_FAILING (ut_test_state.rc != UT_PASS)
+#define UT_PASSING (ut_test_state.rc == UT_PASS)
+#define UT_JUST_FAILED (ut_test_state.rc == UT_FAIL && ut_test_state.prev_rc == UT_PASS)
 
 #define UT_EXPECT(...) do { \
-    if ((prev_ut_rc = ut_rc, ut_rc = (__VA_ARGS__) ? UT_PASS : UT_FAIL)) {\
-        if (prev_ut_rc != UT_PASS && ut_rc == UT_PASS) \
-            ut_rc = prev_ut_rc; \
+    if ((ut_test_state.prev_rc = ut_test_state.rc, \
+        ut_test_state.rc = (__VA_ARGS__) ? UT_PASS : UT_FAIL)) {\
+        if (ut_test_state.prev_rc != UT_PASS && ut_test_state.rc == UT_PASS) \
+            ut_test_state.rc = ut_test_state.prev_rc; \
         ut_report("%sExpectation failed%s at %s:%d %s\n", \
                 ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), \
                 __FILE__, __LINE__, #__VA_ARGS__); \
@@ -54,14 +60,15 @@ const char *ut_color(ut_color_t color);
 } while (0)
 
 #define UT_ASSERT(...) do { \
-    if ((prev_ut_rc = ut_rc, ut_rc = (__VA_ARGS__) ? UT_PASS : UT_FAIL)) {\
+    if ((ut_test_state.prev_rc = ut_test_state.rc, \
+         ut_test_state.rc = (__VA_ARGS__) ? UT_PASS : UT_FAIL)) {\
         ut_report("%sAssertion failed%s at %s:%d %s\n", \
                 ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT), \
                 __FILE__, __LINE__, #__VA_ARGS__); \
         goto ut_final; \
     } \
-    if (prev_ut_rc != UT_PASS && ut_rc == UT_PASS) \
-        ut_rc = prev_ut_rc; \
+    if (ut_test_state.prev_rc != UT_PASS && ut_test_state.rc == UT_PASS) \
+        ut_test_state.rc = ut_test_state.prev_rc; \
 } while (0)
 
 #define UT_HARD_ASSERT(...) do { \

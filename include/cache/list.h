@@ -2,19 +2,19 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include <time.h>
+
+typedef unsigned long sftfs_cache_time_t; // milliseconds
+typedef sftfs_cache_time_t (*sftfs_cache_clock_t)();
 
 struct sftfs_cache_list_node {
     struct sftfs_cache_list_node *prev, *next;
-    time_t mod_time;
+    sftfs_cache_time_t mod_time;
     void *data;
 };
 
-typedef time_t (*sftfs_cache_clock_t)();
-
 struct sftfs_cache_list_config {
     sftfs_cache_clock_t clock;
-    time_t ttl;
+    sftfs_cache_time_t ttl;
 };
 
 struct sftfs_cache_list {

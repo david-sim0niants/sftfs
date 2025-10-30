@@ -279,7 +279,9 @@ void sftfs_htable_clear(sftfs_htable_ptr table)
             delete_entry(entry);
             entry = next_entry;
         }
+        (*table)->buckets[i] = NULL;
     }
+    (*table)->nr_entries = 0;
 }
 
 sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table, size_t new_hash,
