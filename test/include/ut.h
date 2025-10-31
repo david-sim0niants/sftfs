@@ -32,7 +32,7 @@ const char *ut_color(ut_color_t color);
 
 #define UT_CONCAT_IMPL(x, y) x##y
 #define UT_CONCAT(x, y) UT_CONCAT_IMPL(x, y)
-#define UT_ON_INIT void __attribute__((constructor)) UT_CONCAT(ut_on_init, __LINE__)(void)
+#define UT_ON_INIT static void __attribute__((constructor)) UT_CONCAT(ut_on_init, __LINE__)(void)
 
 struct ut_test_state {
     int rc, prev_rc;

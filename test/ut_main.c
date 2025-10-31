@@ -70,12 +70,12 @@ static void pop_test_name(const char *name)
 
 static void ut_say_passed(void)
 {
-    ut_report("%sPASSED%s", ut_color(UT_COLOR_GREEN), ut_color(UT_COLOR_DEFAULT));
+    ut_report("%sPASSED%s\n", ut_color(UT_COLOR_GREEN), ut_color(UT_COLOR_DEFAULT));
 }
 
 static void ut_say_failed(void)
 {
-    ut_report("%sFAILED%s", ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT));
+    ut_report("%sFAILED%s\n", ut_color(UT_COLOR_RED), ut_color(UT_COLOR_DEFAULT));
 }
 
 static int ut_run(struct ut_test *test)
@@ -101,7 +101,6 @@ static int ut_run(struct ut_test *test)
         } else {
             ut_say_failed();
         }
-        printf("\n");
 
         pop_test_name(subtest->name);
     }
