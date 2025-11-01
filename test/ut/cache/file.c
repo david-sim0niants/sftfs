@@ -10,7 +10,7 @@ static sftfs_cache_time_t clock_mock(void)
 
 struct fixture {
     struct sftfs_cache cache;
-    const char **paths;
+    char **paths;
     size_t nr_paths;
 };
 
@@ -61,6 +61,7 @@ static struct fixture *create_fixture(sftfs_cache_time_t ttl, size_t data_size, 
         return f;
 
     f->paths = calloc(nr_files, sizeof(char *));
+    f->nr_paths = nr_files;
     for (int i = 0; i < nr_files; ++i) {
         f->paths[i] = generate_path();
         void *file_data = sftfs_cache_take_file(&f->cache, f->paths[i]);
@@ -74,6 +75,8 @@ static struct fixture *create_fixture(sftfs_cache_time_t ttl, size_t data_size, 
 static void delete_fixture(struct fixture *f)
 {
     sftfs_cache_file_destruct(&f->cache);
+    for (size_t i = 0; i < f->nr_paths; ++i)
+        free(f->paths[i]);
     free(f->paths);
     f->nr_paths = 0;
     free(f);

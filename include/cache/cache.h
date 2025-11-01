@@ -12,8 +12,8 @@ typedef struct sftfs_cache_entry_s {
 } sftfs_cache_entry;
 
 struct sftfs_cache_on_evict {
-    void *user_data;
     void (*func)(void *entry_data, void *user_data);
+    void *user_data;
 };
 
 struct sftfs_cache {

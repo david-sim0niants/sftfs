@@ -182,7 +182,8 @@ void sftfs_cache_clear(struct sftfs_cache *cache)
     if (is_on_evict_set(&cache->on_evict)) {
         sftfs_htable_entry_link entry_link = sftfs_htable_first_entry(cache->table);
         if (entry_link) {
-            for (; *entry_link; entry_link = sftfs_htable_next_entry(cache->table, *entry_link))
+            for (; entry_link && *entry_link;
+                   entry_link = sftfs_htable_next_entry(cache->table, *entry_link))
                 call_on_evict(&cache->on_evict, from_htable_entry(*entry_link));
         }
     }

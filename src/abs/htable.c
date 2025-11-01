@@ -201,16 +201,10 @@ sftfs_htable_entry_link_ro sftfs_htable_first_entry_ro(sftfs_htable_ro table)
 
 sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable table, sftfs_htable_entry entry)
 {
-    sftfs_htable_entry_link entry_link = NULL;
-    if (entry) {
-        entry_link = &entry->next;
-        if (*entry_link)
-            return entry_link;
-    }
+    if (entry->next)
+        return &entry->next;
 
-    size_t index = 0;
-    if (entry_link)
-        index = (entry_link[0]->hash % table->nr_buckets) + 1;
+    size_t index = (entry->hash % table->nr_buckets) + 1;
 
     for (; index < table->nr_buckets; ++index)
         if (table->buckets[index])
@@ -221,16 +215,10 @@ sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable table, sftfs_htable
 
 sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_ro table, sftfs_htable_entry_ro entry)
 {
-    sftfs_htable_entry_link_ro entry_link = NULL;
-    if (entry) {
-        entry_link = &entry->next;
-        if (*entry_link)
-            return entry_link;
-    }
+    if (entry->next)
+        return &entry->next;
 
-    size_t index = 0;
-    if (entry_link)
-        index = (entry_link[0]->hash % table->nr_buckets) + 1;
+    size_t index = (entry->hash % table->nr_buckets) + 1;
 
     for (; index < table->nr_buckets; ++index)
         if (table->buckets[index])
