@@ -41,6 +41,13 @@ static inline bool sftfs_cache_list_empty(const struct sftfs_cache_list *list)
     return NULL == list->lru;
 }
 
+static inline bool sftfs_cache_list_node_unlinked(
+        const struct sftfs_cache_list *list,
+        const struct sftfs_cache_list_node *node)
+{
+    return node->prev == NULL && node->next == NULL && node != list->lru;
+}
+
 static inline void sftfs_cache_list_reset_node(struct sftfs_cache_list_node *node)
 {
     node->prev = node->next = NULL;

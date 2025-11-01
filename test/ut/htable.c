@@ -2,7 +2,6 @@
 #include "ut.h"
 
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -29,10 +28,11 @@ static struct fixture create_fixture(size_t nr_entries)
     return (struct fixture){table, hashes, data, nr_entries};
 }
 
-static void delete_fixture(struct fixture fixture)
+static void delete_fixture(struct fixture f)
 {
-    free(fixture.data);
-    sftfs_htable_delete(fixture.table);
+    free(f.hashes);
+    free(f.data);
+    sftfs_htable_delete(f.table);
 }
 
 static int lookup_succeeds(void)

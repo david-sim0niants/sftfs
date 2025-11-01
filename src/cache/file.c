@@ -134,7 +134,7 @@ int sftfs_cache_give_file(struct sftfs_cache *cache, const char *path, void *dat
 const void *sftfs_cache_peek_file(struct sftfs_cache *cache, const char *path)
 {
     const sftfs_cache_entry *entry = find_entry(cache, path);
-    return entry ? entry->data : NULL;
+    return entry ? view_file_ro(entry)->data : NULL;
 }
 
 int sftfs_cache_invalidate_file(struct sftfs_cache *cache, const char *path)
