@@ -20,6 +20,10 @@ void sftfs_cache_destruct(struct sftfs_cache *cache)
     sftfs_cache_clear(cache);
     sftfs_cache_list_destruct(&cache->list);
     sftfs_htable_delete(cache->table);
+    cache->table = NULL;
+    cache->entry_data_size = 0;
+    cache->on_evict.user_data = NULL;
+    cache->on_evict.func = NULL;
 }
 
 static inline sftfs_cache_entry *from_htable_entry(sftfs_htable_entry entry)
@@ -128,6 +132,8 @@ int sftfs_cache_give(struct sftfs_cache *cache, sftfs_cache_entry *entry)
 int sftfs_cache_invalidate(struct sftfs_cache *cache, const sftfs_cache_entry *entry_ro)
 {
     sftfs_cache_entry *entry = sftfs_cache_take(cache, entry_ro);
+    if (! entry)
+        return SFTFS_CACHE_UNEXPECTED_ENTRY;
     if (is_on_evict_set(&cache->on_evict))
         call_on_evict(&cache->on_evict, entry);
     return sftfs_cache_free(cache, entry);
@@ -177,17 +183,26 @@ bool sftfs_cache_contains_unlisted(const struct sftfs_cache *cache, const sftfs_
     return entry_link && *entry_link && unlisted_entry(cache, from_htable_entry(*entry_link));
 }
 
+static void call_on_evict_of_all_entries(struct sftfs_cache *cache)
+{
+    if (! is_on_evict_set(&cache->on_evict))
+        return;
+
+    sftfs_htable_entry_link entry_link = sftfs_htable_first_entry(cache->table);
+    if (! entry_link || !*entry_link)
+        return;
+
+    for (; entry_link && *entry_link; entry_link = sftfs_htable_next_entry(cache->table, *entry_link)) {
+        sftfs_cache_entry *entry = from_htable_entry(*entry_link);
+        if (unlisted_entry(cache, entry))
+            continue;
+        call_on_evict(&cache->on_evict, entry);
+    }
+}
+
 void sftfs_cache_clear(struct sftfs_cache *cache)
 {
-    if (is_on_evict_set(&cache->on_evict)) {
-        sftfs_htable_entry_link entry_link = sftfs_htable_first_entry(cache->table);
-        if (entry_link) {
-            for (; entry_link && *entry_link;
-                   entry_link = sftfs_htable_next_entry(cache->table, *entry_link))
-                call_on_evict(&cache->on_evict, from_htable_entry(*entry_link));
-        }
-    }
-
+    call_on_evict_of_all_entries(cache);
     cache->list.lru = cache->list.mru = NULL;
     sftfs_htable_clear(&cache->table);
 }

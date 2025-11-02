@@ -98,17 +98,22 @@ static const sftfs_cache_entry *find_entry(struct sftfs_cache *cache, const char
 void *sftfs_cache_take_file(struct sftfs_cache *cache, const char *path)
 {
     const sftfs_cache_entry *entry = find_entry(cache, path);
-    sftfs_cache_entry *taken_entry;
-    if (entry)
+    bool newly_allocated = false;
+
+    sftfs_cache_entry *taken_entry = NULL;
+    if (entry) {
         taken_entry = sftfs_cache_take(cache, entry);
-    else
+    } else {
         taken_entry = sftfs_cache_alloc(cache, fnv1a_hash(path));
+        newly_allocated = true;
+    }
 
     if (! taken_entry)
         return NULL;
 
     struct file_cache_entry *file_entry = view_file(taken_entry);
-    file_entry = construct_file(path, file_entry);
+    if (newly_allocated)
+        file_entry = construct_file(path, file_entry);
 
     if (! file_entry) {
         sftfs_cache_free(cache, taken_entry);
@@ -139,5 +144,6 @@ const void *sftfs_cache_peek_file(struct sftfs_cache *cache, const char *path)
 
 int sftfs_cache_invalidate_file(struct sftfs_cache *cache, const char *path)
 {
-    return sftfs_cache_invalidate(cache, find_entry(cache, path));
+    const sftfs_cache_entry *entry = find_entry(cache, path);
+    return entry ? sftfs_cache_invalidate(cache, entry) : SFTFS_CACHE_FILE_OK;
 }

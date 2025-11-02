@@ -19,6 +19,6 @@ struct sftfs_cache *sftfs_cache_attr_construct(
         struct sftfs_cache_attr_config *config);
 void sftfs_cache_attr_destruct(struct sftfs_cache *cache);
 
-bool sftfs_cache_get_attr(struct sftfs_cache *cache, const char *path, struct stat *stat);
-int sftfs_cache_put_attr(struct sftfs_cache *cache, const char *path, const struct stat *stat);
+bool sftfs_cache_get_attr(struct sftfs_cache *cache, const char *path, struct stat *attr);
+int sftfs_cache_put_attr(struct sftfs_cache *cache, const char *path, const struct stat *attr);
 int sftfs_cache_invalidate_attr(struct sftfs_cache *cache, const char *path);
