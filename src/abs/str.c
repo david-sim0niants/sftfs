@@ -17,7 +17,7 @@ sftfs_str sftfs_str_create(const char *from, size_t size)
 
     str->capacity = str->size = size;
     if (from)
-        memcpy(str->c, from, size + 1);
+        memcpy(str->c, from, size);
 
     null_term(str);
     return str;
@@ -64,7 +64,7 @@ sftfs_str sftfs_str_extend(sftfs_str str, const char *from, size_t size)
     if (NULL == str)
         return NULL;
 
-    memcpy(&str->c[prev_size], from, size + 1);
+    memcpy(&str->c[prev_size], from, size);
     null_term(str);
     return str;
 }

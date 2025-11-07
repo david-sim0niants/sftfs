@@ -95,7 +95,7 @@ static const sftfs_cache_entry *find_entry(struct sftfs_cache *cache, const char
     return entry;
 }
 
-void *sftfs_cache_take_file(struct sftfs_cache *cache, const char *path)
+void *sftfs_cache_take_file(struct sftfs_cache *cache, const char *path, int *is_new)
 {
     const sftfs_cache_entry *entry = find_entry(cache, path);
     bool newly_allocated = false;
@@ -119,6 +119,9 @@ void *sftfs_cache_take_file(struct sftfs_cache *cache, const char *path)
         sftfs_cache_free(cache, taken_entry);
         return NULL;
     }
+
+    if (is_new)
+        *is_new = newly_allocated;
 
     return file_entry->data;
 }

@@ -22,7 +22,7 @@ int sftfs_sftp_chown(sftfs_endp endp, const char *path, uid_t uid, gid_t gid);
 
 int sftfs_sftp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir);
 
-int sftfs_sftp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
+int sftfs_sftp_readdir(sftfs_endp endp, const char *path, sftfs_endp_dir dir, int flags,
         sftfs_endp_readdir_callee callee, void *user_data);
 
 int sftfs_sftp_closedir(sftfs_endp endp, sftfs_endp_dir dir);

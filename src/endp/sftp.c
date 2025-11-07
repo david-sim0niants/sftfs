@@ -407,10 +407,11 @@ int sftfs_sftp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
     return 0;
 }
 
-int sftfs_sftp_readdir(sftfs_endp endp, const sftfs_endp_dir dir, int flags,
+int sftfs_sftp_readdir(sftfs_endp endp, const char *path, const sftfs_endp_dir dir, int flags,
         sftfs_endp_readdir_callee callee, void *user_data)
 {
     SFTFS_TRACE_FUNC
+    (void)path;
     sftp_session sftp = get_sftp(endp);
 
     sftp_attributes attr = NULL;

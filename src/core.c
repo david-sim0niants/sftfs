@@ -127,11 +127,8 @@ int sftfs_readdir(const char *path, void *buf, fuse_fill_dir_t fill_dir, off_t o
         .fill_dir = fill_dir,
     };
 
-    int endp_flags = 0;
-    endp_flags |= (flags & (SFTFS_ENDP_READDIR_DEFAULT)) ? SFTFS_ENDP_READDIR_DEFAULT : 0;
-    endp_flags |= (flags & (SFTFS_ENDP_READDIR_PLUS)) ? SFTFS_ENDP_READDIR_PLUS : 0;
-
-    int rc = sftfs_endp_readdir(get_endp(), wrap_dir(fi->fh), endp_flags, readdir_callee, &data);
+    int endp_flags = (int)flags & (SFTFS_ENDP_READDIR_DEFAULT | SFTFS_ENDP_READDIR_PLUS);
+    int rc = sftfs_endp_readdir(get_endp(), path, wrap_dir(fi->fh), endp_flags, readdir_callee, &data);
 
     if (data.rc != 0)
         return data.rc;

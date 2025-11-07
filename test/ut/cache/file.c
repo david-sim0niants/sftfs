@@ -66,7 +66,7 @@ static struct fixture *create_fixture(sftfs_cache_time_t ttl, size_t data_size, 
     f->nr_paths = nr_files;
     for (int i = 0; i < nr_files; ++i) {
         f->paths[i] = generate_path();
-        void *file_data = sftfs_cache_take_file(&f->cache, f->paths[i]);
+        void *file_data = sftfs_cache_take_file(&f->cache, f->paths[i], NULL);
         UT_HARD_ASSERT(file_data);
         generate_data(file_data, data_size);
         UT_HARD_ASSERT(sftfs_cache_give_file(&f->cache, f->paths[i], file_data) == SFTFS_CACHE_FILE_OK);
@@ -96,8 +96,10 @@ static int take_give_non_exist(int nr_initial_nodes)
     UT_BEGIN;
 
     const char *path = "/foo/bar";
-    void *file_data = sftfs_cache_take_file(cache, path);
+    int is_new = 0;
+    void *file_data = sftfs_cache_take_file(cache, path, &is_new);
     UT_ASSERT(file_data);
+    UT_ASSERT(is_new);
     memcpy(file_data, data, f->data_size);
     UT_ASSERT(sftfs_cache_give_file(cache, path, file_data) == SFTFS_CACHE_FILE_OK);
 
@@ -131,8 +133,10 @@ static int take_give_existing_file(void)
     UT_BEGIN;
     const char *path = f->paths[rand() % f->nr_paths];
 
-    void *file_data = sftfs_cache_take_file(&f->cache, path);
+    int is_new = 0;
+    void *file_data = sftfs_cache_take_file(&f->cache, path, &is_new);
     UT_ASSERT(file_data);
+    UT_ASSERT(! is_new);
 
     memcpy(file_data, data, f->data_size);
     UT_ASSERT(sftfs_cache_give_file(&f->cache, path, file_data) == SFTFS_CACHE_FILE_OK);

@@ -126,7 +126,8 @@ static int init_sftfs(struct sftfs_options *opts)
 
 #ifdef SFTFS_CACHED
     struct sftfs_cached_params cached_params = {
-        .ttl = 10000,
+        .attr_ttl = 10000 * 10000,
+        .dir_ttl = 10000 * 10000,
     };
 
     SFTFS_CACHED_INIT(sftfs.endp, &cached_params, struct sftfs_sftp, sftfs_sftp_construct, &sftp_params);

@@ -63,10 +63,10 @@ int sftfs_endp_opendir(sftfs_endp endp, const char *path, sftfs_endp_dir *dir)
 }
 
 static inline
-int sftfs_endp_readdir(sftfs_endp endp, sftfs_endp_dir dir, int flags,
+int sftfs_endp_readdir(sftfs_endp endp, const char *path, sftfs_endp_dir dir, int flags,
         sftfs_endp_readdir_callee callee, void *user_data)
 {
-    return SFTFS_ENDP_readdir(endp, dir, flags, callee, user_data);
+    return SFTFS_ENDP_readdir(endp, path, dir, flags, callee, user_data);
 }
 
 static inline

@@ -1,8 +1,13 @@
 #include "endp/cached_init.h"
+#include "endp/cached.h"
+
 #include "cache/attr.h"
+#include "cache/dir.h"
+
 #include "func_trace.h"
 #include "logging.h"
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,17 +40,30 @@ sftfs_endp sftfs_cached_construct(struct sftfs_cached_endp *handle, struct sftfs
     struct sftfs_cache_attr_config attr_config = {
         .list = {
             params->clock,
-            params->ttl,
+            params->attr_ttl,
         },
     };
     if (NULL == sftfs_cache_attr_construct(&handle->attr_cache, &attr_config))
         return NULL;
+
+    struct sftfs_cache_dir_config dir_config = {
+        .list = {
+            params->clock,
+            params->dir_ttl,
+        },
+    };
+    if (NULL == sftfs_cache_dir_construct(&handle->dir_cache, &dir_config)) {
+        sftfs_cache_attr_destruct(&handle->attr_cache);
+        return NULL;
+    }
+
     return handle->base_endp;
 }
 
 void sftfs_cached_destruct(sftfs_endp endp)
 {
     sftfs_cache_attr_destruct(&get_cached(endp)->attr_cache);
+    sftfs_cache_attr_destruct(&get_cached(endp)->dir_cache);
 }
 
 bool sftfs_cached_fetch_attr(struct sftfs_cached_endp *endp, const char *path, struct stat *attr)
@@ -63,6 +81,7 @@ void sftfs_cached_store_attr(struct sftfs_cached_endp *endp, const char *path, c
 {
     SFTFS_TRACE_FUNC
     int rc = sftfs_cache_put_attr(&endp->attr_cache, path, attr);
+    sftfs_trace("Cache PUT: attribute path: %s\n", path);
     if (rc != SFTFS_CACHE_ATTR_OK)
         sftfs_error("Failed to cache attribute for path %s, sftfs_cache_put_attr(...) failed\n", path);
 }
@@ -70,5 +89,6 @@ void sftfs_cached_store_attr(struct sftfs_cached_endp *endp, const char *path, c
 void sftfs_cached_inval_attr(struct sftfs_cached_endp *endp, const char *path)
 {
     SFTFS_TRACE_FUNC
+    sftfs_trace("Cache INVALIDATE: attribute path: %s\n", path);
     sftfs_cache_invalidate_attr(&endp->attr_cache, path);
 }

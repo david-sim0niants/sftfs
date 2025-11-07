@@ -18,7 +18,7 @@ struct sftfs_cache *sftfs_cache_file_construct(
         struct sftfs_cache *cache, struct sftfs_cache_file_config *config);
 void sftfs_cache_file_destruct(struct sftfs_cache *cache);
 
-void *sftfs_cache_take_file(struct sftfs_cache *cache, const char *path);
+void *sftfs_cache_take_file(struct sftfs_cache *cache, const char *path, int *is_new);
 int sftfs_cache_give_file(struct sftfs_cache *cache, const char *path, void *data);
 const void *sftfs_cache_peek_file(struct sftfs_cache *cache, const char *path);
 int sftfs_cache_invalidate_file(struct sftfs_cache *cache, const char *path);
