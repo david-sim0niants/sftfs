@@ -80,9 +80,11 @@ const char *sftfs_cache_read_dir(sftfs_cache_dir_handle *handle)
         return NULL;
 
     const char *entry = handle->curr_entry;
-    while (*++entry);
-    ++entry;
-    handle->curr_entry = entry;
+    const char *next_entry = entry;
+
+    while (*++next_entry);
+    ++next_entry;
+    handle->curr_entry = next_entry;
     return entry;
 }
 
