@@ -139,6 +139,17 @@ int sftfs_cache_give_file(struct sftfs_cache *cache, const char *path, void *dat
     return sftfs_cache_give(cache, entry);
 }
 
+int sftfs_cache_drop_file(struct sftfs_cache *cache, const char *path, void *data)
+{
+    struct file_cache_entry *file_entry = container_of(data, struct file_cache_entry, data);
+    if (! str_eq(file_entry->path, path))
+        return SFTFS_CACHE_FILE_PATH_MISMATCH;
+
+    destruct_file(file_entry);
+    sftfs_cache_entry *entry = container_of(file_entry, sftfs_cache_entry, data);
+    return sftfs_cache_free(cache, entry);
+}
+
 const void *sftfs_cache_peek_file(struct sftfs_cache *cache, const char *path)
 {
     const sftfs_cache_entry *entry = find_entry(cache, path);

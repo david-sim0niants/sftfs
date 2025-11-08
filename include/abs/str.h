@@ -37,7 +37,7 @@ static inline const char *sftfs_str_c_ro(sftfs_str_ro str)
     return str->c;
 }
 
-static inline const char *sftfs_str_c(sftfs_str str)
+static inline char *sftfs_str_c(sftfs_str str)
 {
     return str->c;
 }

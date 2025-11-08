@@ -46,7 +46,7 @@ static int take_fill_give_dir_ok(void)
     sftfs_cache_dir *dir = sftfs_cache_take_dir(&f->cache, path);
     UT_ASSERT(dir);
 
-    const char *entries[] = {"baz", "abc"};
+    const char *entries[] = {".", "..", "baz", "abc"};
     const size_t nr_entries = sizeof(entries) / sizeof(entries[0]);
     for (size_t i = 0; i < nr_entries; ++i)
         UT_ASSERT(sftfs_cache_add_dir_entry(dir, entries[i]) == SFTFS_CACHE_DIR_OK);
@@ -54,9 +54,12 @@ static int take_fill_give_dir_ok(void)
     UT_ASSERT(sftfs_cache_give_dir(&f->cache, path, dir) == SFTFS_CACHE_DIR_OK);
 
     sftfs_cache_dir_handle dir_h = sftfs_cache_peek_dir(&f->cache, path);
+    UT_ASSERT(sftfs_cache_dir_valid(dir_h));
+
     size_t i = 0;
-    while (sftfs_cache_dir_valid(dir_h) && i < nr_entries) {
-        const char *entry = sftfs_cache_read_dir(&dir_h);
+    const char *entry = NULL;
+    while ((entry = sftfs_cache_read_dir(&dir_h))) {
+        UT_ASSERT(i < nr_entries);
         UT_ASSERT(strcmp(entries[i], entry) == 0);
         ++i;
     }

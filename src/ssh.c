@@ -3,19 +3,7 @@
 
 static int decide_ssh_log_severity(void)
 {
-    switch (SFTFS_ACTIVE_LOGGING_SEVERITY) {
-        case SFTFS_TRACE:
-            return SSH_LOG_TRACE;
-        case SFTFS_DEBUG:
-            return SSH_LOG_DEBUG;
-        case SFTFS_INFO:
-            return SSH_LOG_INFO;
-        case SFTFS_WARN:
-        case SFTFS_ERROR:
-            return SSH_LOG_WARN;
-        default:
-            return SSH_LOG_NONE;
-    }
+    return SSH_LOG_WARN;
 }
 
 int sftfs_ssh_connect(struct sftfs_ssh_config *config, ssh_session *session)

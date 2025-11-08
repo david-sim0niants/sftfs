@@ -53,6 +53,11 @@ int sftfs_cache_give_dir(struct sftfs_cache *cache, const char *path, sftfs_cach
     return sftfs_cache_give_file(cache, path, dir);
 }
 
+int sftfs_cache_drop_dir(struct sftfs_cache *cache, const char *path, sftfs_cache_dir *dir)
+{
+    return sftfs_cache_drop_file(cache, path, dir);
+}
+
 int sftfs_cache_add_dir_entry(sftfs_cache_dir *dir, const char *entry)
 {
     sftfs_str new_entries = sftfs_str_extend(dir->entries, entry, strlen(entry) + 1);

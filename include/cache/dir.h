@@ -26,6 +26,7 @@ void sftfs_cache_dir_destruct(struct sftfs_cache *cache);
 
 sftfs_cache_dir *sftfs_cache_take_dir(struct sftfs_cache *cache, const char *path);
 int sftfs_cache_give_dir(struct sftfs_cache *cache, const char *path, sftfs_cache_dir *dir);
+int sftfs_cache_drop_dir(struct sftfs_cache *cache, const char *path, sftfs_cache_dir *dir);
 int sftfs_cache_add_dir_entry(sftfs_cache_dir *dir, const char *entry);
 int sftfs_cache_clear_dir_entries(sftfs_cache_dir *dir);
 
