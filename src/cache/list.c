@@ -51,12 +51,15 @@ void sftfs_cache_list_remove(struct sftfs_cache_list *list, struct sftfs_cache_l
         node->prev->next = node->next;
     if (node->next)
         node->next->prev = node->prev;
-    if (list->lru == node)
-        list->lru = node->next;
-    if (list->mru == node)
-        list->mru = node->prev;
-    if (NULL == list->lru)
-        list->mru = NULL;
+
+    if (list->lru == node && list->mru == node) {
+        list->lru = list->mru = NULL;
+    } else {
+        if (list->lru == node)
+            list->lru = node->next;
+        if (list->mru == node)
+            list->mru = node->prev;
+    }
 
     sftfs_cache_list_reset_node(node);
 }

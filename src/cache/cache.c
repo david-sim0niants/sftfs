@@ -136,7 +136,6 @@ int sftfs_cache_invalidate(struct sftfs_cache *cache, const sftfs_cache_entry *e
         return SFTFS_CACHE_UNEXPECTED_ENTRY;
     if (is_on_evict_set(&cache->on_evict))
         call_on_evict(&cache->on_evict, entry);
-    sftfs_cache_list_remove(&cache->list, &entry->node);
     int rc = sftfs_cache_free(cache, entry);
     evict_invalid_lru_entries(cache);
     return rc;

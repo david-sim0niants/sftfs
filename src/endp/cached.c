@@ -149,9 +149,9 @@ static void pop_entry(sftfs_str *path_ref, size_t original_path_size)
 {
     sftfs_str path = *path_ref;
 
-    if (original_path_size <= sftfs_str_size(path))
+    if (original_path_size < sftfs_str_size(path))
         path = sftfs_str_resize(path, original_path_size);
-    else
+    else if (strnlen(sftfs_str_c(path), original_path_size) < original_path_size)
         unmark_base_dir(sftfs_str_c(path));
 
     if (path)
@@ -264,6 +264,7 @@ static int cached_readdir_callee(struct sftfs_endp_direntry *direntry, void *use
     if (!*entry_path)
         entry_path = "/";
 
+    sftfs_debug("entry_path=%s\n", entry_path);
     bool success = sftfs_cached_store_attr(data->endp, entry_path, &direntry->stat);
 
     pop_entry(&data->path, path_size);
