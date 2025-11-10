@@ -187,7 +187,19 @@ int sftfs_access(const char *path, int mode)
 {
     SFTFS_TRACE_FUNC
     sftfs_debug("path=%s, mode=%o\n", path, mode);
-    return sftfs_endp_access(get_endp(), path, mode);
+    // return sftfs_endp_access(get_endp(), path, mode);
+
+    struct stat attr;
+    int rc = sftfs_getattr(path, &attr, NULL);
+    if (rc != 0)
+        return rc;
+
+    if (((mode & R_OK) && !(attr.st_mode & S_IRUSR)) ||
+        ((mode & W_OK) && !(attr.st_mode & S_IWUSR)) ||
+        ((mode & X_OK) && !(attr.st_mode & S_IXUSR)))
+        rc = -EACCES;
+
+    return rc;
 }
 
 int sftfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
