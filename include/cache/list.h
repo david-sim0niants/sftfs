@@ -20,6 +20,9 @@ struct sftfs_cache_list_config {
 struct sftfs_cache_list {
     struct sftfs_cache_list_node *lru, *mru;
     struct sftfs_cache_list_config config;
+#ifndef NDEBUG
+    size_t nr_nodes;
+#endif
 };
 
 void sftfs_cache_list_construct(struct sftfs_cache_list *list,
