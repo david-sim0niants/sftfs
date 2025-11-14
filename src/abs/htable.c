@@ -6,7 +6,10 @@
 #include <string.h>
 
 struct sftfs_htable_entry_s {
-    struct sftfs_htable_entry_s *next;
+    union {
+        struct sftfs_htable_entry_s *next;
+        const struct sftfs_htable_entry_s *next_ro;
+    };
     size_t hash;
     char payload[0];
 };
@@ -14,7 +17,10 @@ struct sftfs_htable_entry_s {
 struct sftfs_htable_s {
     size_t nr_buckets;
     size_t nr_entries;
-    sftfs_htable_entry buckets[0];
+    union {
+        sftfs_htable_entry buckets[0];
+        sftfs_htable_entry_ro buckets_ro[0];
+    };
 };
 
 static size_t prime_lower_bound(size_t target)
@@ -138,22 +144,21 @@ sftfs_htable_entry_link sftfs_htable_insert(
     return entry_link;
 }
 
-#define FIND_ENTRY_WITH_HASH(entry_link, hash) \
-    for (; *entry_link; entry_link = &(*entry_link)->next) \
-        if ((*entry_link)->hash == hash) \
-            break;
-
 sftfs_htable_entry_link sftfs_htable_lookup(sftfs_htable table, size_t hash)
 {
     sftfs_htable_entry_link entry_link = &table->buckets[hash % table->nr_buckets];
-    FIND_ENTRY_WITH_HASH(entry_link, hash);
+    for (; *entry_link; entry_link = &(*entry_link)->next) \
+        if ((*entry_link)->hash == hash) \
+            break;
     return entry_link;
 }
 
 sftfs_htable_entry_link_ro sftfs_htable_lookup_ro(sftfs_htable_ro table, size_t hash)
 {
-    sftfs_htable_entry_link_ro entry_link = &table->buckets[hash % table->nr_buckets];
-    FIND_ENTRY_WITH_HASH(entry_link, hash);
+    sftfs_htable_entry_link_ro entry_link = &table->buckets_ro[hash % table->nr_buckets];
+    for (; *entry_link; entry_link = &(*entry_link)->next_ro) \
+        if ((*entry_link)->hash == hash) \
+            break;
     return entry_link;
 }
 
@@ -161,15 +166,19 @@ sftfs_htable_entry_link sftfs_htable_lookup_next(sftfs_htable_entry entry)
 {
     const size_t hash = entry->hash;
     sftfs_htable_entry_link entry_link = &entry->next;
-    FIND_ENTRY_WITH_HASH(entry_link, hash);
+    for (; *entry_link; entry_link = &(*entry_link)->next) \
+        if ((*entry_link)->hash == hash) \
+            break;
     return entry_link;
 }
 
 sftfs_htable_entry_link_ro sftfs_htable_lookup_next_ro(sftfs_htable_entry_ro entry)
 {
     const size_t hash = entry->hash;
-    sftfs_htable_entry_link_ro entry_link = &entry->next;
-    FIND_ENTRY_WITH_HASH(entry_link, hash);
+    sftfs_htable_entry_link_ro entry_link = &entry->next_ro;
+    for (; *entry_link; entry_link = &(*entry_link)->next_ro) \
+        if ((*entry_link)->hash == hash) \
+            break;
     return entry_link;
 }
 
@@ -180,7 +189,7 @@ sftfs_htable_entry_link sftfs_htable_get_bucket(sftfs_htable table, size_t index
 
 sftfs_htable_entry_link_ro sftfs_htable_get_bucket_ro(sftfs_htable_ro table, size_t index)
 {
-    return &table->buckets[index];
+    return &table->buckets_ro[index];
 }
 
 sftfs_htable_entry_link sftfs_htable_first_entry(sftfs_htable table)
@@ -195,7 +204,7 @@ sftfs_htable_entry_link_ro sftfs_htable_first_entry_ro(sftfs_htable_ro table)
 {
     for (size_t i = 0; i < table->nr_buckets; ++i)
         if (table->buckets[i])
-            return &table->buckets[i];
+            return &table->buckets_ro[i];
     return NULL;
 }
 
@@ -216,13 +225,13 @@ sftfs_htable_entry_link sftfs_htable_next_entry(sftfs_htable table, sftfs_htable
 sftfs_htable_entry_link_ro sftfs_htable_next_entry_ro(sftfs_htable_ro table, sftfs_htable_entry_ro entry)
 {
     if (entry->next)
-        return &entry->next;
+        return &entry->next_ro;
 
     size_t index = (entry->hash % table->nr_buckets) + 1;
 
     for (; index < table->nr_buckets; ++index)
         if (table->buckets[index])
-            return &table->buckets[index];
+            return &table->buckets_ro[index];
 
     return NULL;
 }

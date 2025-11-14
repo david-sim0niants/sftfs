@@ -6,7 +6,7 @@ typedef struct sftfs_htable_entry_s *sftfs_htable_entry;
 typedef const struct sftfs_htable_entry_s *sftfs_htable_entry_ro;
 
 typedef sftfs_htable_entry *sftfs_htable_entry_link;
-typedef const sftfs_htable_entry *sftfs_htable_entry_link_ro;
+typedef const sftfs_htable_entry_ro *sftfs_htable_entry_link_ro;
 
 typedef struct sftfs_htable_s *sftfs_htable;
 typedef const struct sftfs_htable_s *sftfs_htable_ro;
