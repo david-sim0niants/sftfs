@@ -67,6 +67,37 @@ void sftfs_cached_destruct(sftfs_endp endp)
     sftfs_cache_attr_destruct(&get_cached(endp)->dir_cache);
 }
 
+void sftfs_cached_inval_all(struct sftfs_cached_endp *endp, const char *path)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_cache_invalidate_attr(&endp->attr_cache, path);
+    sftfs_cache_invalidate_dir(&endp->dir_cache, path);
+}
+
+static inline const char *find_last_seperator(const char *path)
+{
+    const char *sep = path;
+    assert(*sep == '/');
+    while (*++path)
+        if (*path == '/')
+            sep = path;
+    return sep;
+}
+
+void sftfs_cached_inval_all_dir(struct sftfs_cached_endp *endp, const char *path)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_cached_inval_all(endp, path);
+    const char *last_sep = find_last_seperator(path);
+
+    if (last_sep == path)
+        return;
+
+    char *base_dir = strndup(path, last_sep - path - 1);
+    sftfs_cached_inval_all(endp, base_dir);
+    free(base_dir);
+}
+
 bool sftfs_cached_fetch_attr(struct sftfs_cached_endp *endp, const char *path, struct stat *attr)
 {
     SFTFS_TRACE_FUNC
