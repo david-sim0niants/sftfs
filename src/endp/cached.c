@@ -45,7 +45,7 @@ sftfs_endp sftfs_cached_construct(struct sftfs_cached_endp *handle, struct sftfs
         },
     };
     if (NULL == sftfs_cache_attr_construct(&handle->attr_cache, &attr_config))
-        return NULL;
+        goto attr_cache_construct_failed;
 
     struct sftfs_cache_dir_config dir_config = {
         .list = {
@@ -53,18 +53,28 @@ sftfs_endp sftfs_cached_construct(struct sftfs_cached_endp *handle, struct sftfs
             params->dir_ttl,
         },
     };
-    if (NULL == sftfs_cache_dir_construct(&handle->dir_cache, &dir_config)) {
-        sftfs_cache_attr_destruct(&handle->attr_cache);
-        return NULL;
-    }
+    if (NULL == sftfs_cache_dir_construct(&handle->dir_cache, &dir_config))
+        goto dir_cache_construct_failed;
+
+    handle->handle_path_map = sftfs_htable_create(0);
+    if (NULL == handle->handle_path_map)
+        goto handle_path_map_create_failed;
 
     return handle->base_endp;
+
+handle_path_map_create_failed:
+    sftfs_cache_dir_destruct(&handle->dir_cache);
+dir_cache_construct_failed:
+    sftfs_cache_attr_destruct(&handle->attr_cache);
+attr_cache_construct_failed:
+    return NULL;
 }
 
 void sftfs_cached_destruct(sftfs_endp endp)
 {
+    sftfs_htable_delete(get_cached(endp)->handle_path_map);
+    sftfs_cache_dir_destruct(&get_cached(endp)->dir_cache);
     sftfs_cache_attr_destruct(&get_cached(endp)->attr_cache);
-    sftfs_cache_attr_destruct(&get_cached(endp)->dir_cache);
 }
 
 void sftfs_cached_inval_all(struct sftfs_cached_endp *endp, const char *path)
@@ -98,14 +108,32 @@ void sftfs_cached_inval_all_dir(struct sftfs_cached_endp *endp, const char *path
     free(base_dir);
 }
 
+const char *sftfs_cached_get_handled_path(struct sftfs_cached_endp *endp, uintptr_t handle)
+{
+    sftfs_htable_entry_link_ro entry_link = sftfs_htable_lookup_ro(endp->handle_path_map, handle);
+    sftfs_htable_entry_ro entry = entry_link ? *entry_link : NULL;
+    return entry ? sftfs_htable_entry_data_ro(entry) : NULL;
+}
+
+void sftfs_cached_handle_path(struct sftfs_cached_endp *endp, uintptr_t handle, const char *path)
+{
+    sftfs_htable_remove_hash(&endp->handle_path_map, handle);
+    sftfs_htable_insert(&endp->handle_path_map, handle, path, strlen(path) + 1);
+}
+
+void sftfs_cached_unhandle_path(struct sftfs_cached_endp *endp, uintptr_t handle)
+{
+    sftfs_htable_remove_hash(&endp->handle_path_map, handle);
+}
+
 bool sftfs_cached_fetch_attr(struct sftfs_cached_endp *endp, const char *path, struct stat *attr)
 {
     SFTFS_TRACE_FUNC
     bool hit = sftfs_cache_get_attr(&endp->attr_cache, path, attr);
     if (hit)
-        sftfs_trace("Cache HIT: attribute path: %s\n", path);
+        sftfs_debug("Cache HIT: attribute path: %s\n", path);
     else
-        sftfs_trace("Cache MISS: attribute path: %s\n", path);
+        sftfs_debug("Cache MISS: attribute path: %s\n", path);
     return hit;
 }
 
@@ -113,7 +141,7 @@ bool sftfs_cached_store_attr(struct sftfs_cached_endp *endp, const char *path, c
 {
     SFTFS_TRACE_FUNC
     int rc = sftfs_cache_put_attr(&endp->attr_cache, path, attr);
-    sftfs_trace("Cache PUT: attribute path: %s\n", path);
+    sftfs_debug("Cache PUT: attribute path: %s\n", path);
     if (rc != SFTFS_CACHE_ATTR_OK)
         sftfs_error("Failed to cache attribute for path %s, sftfs_cache_put_attr(...) failed\n", path);
     return rc == 0;
@@ -122,8 +150,15 @@ bool sftfs_cached_store_attr(struct sftfs_cached_endp *endp, const char *path, c
 void sftfs_cached_inval_attr(struct sftfs_cached_endp *endp, const char *path)
 {
     SFTFS_TRACE_FUNC
-    sftfs_trace("Cache INVALIDATE: attribute path: %s\n", path);
+    sftfs_debug("Cache INVALIDATE: attribute path: %s\n", path);
     sftfs_cache_invalidate_attr(&endp->attr_cache, path);
+}
+
+void sftfs_cached_rename_all(struct sftfs_cached_endp *endp, const char *oldpath, const char *newpath)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_cache_rename_file(&endp->attr_cache, oldpath, newpath);
+    sftfs_cache_rename_file(&endp->dir_cache, oldpath, newpath);
 }
 
 bool sftfs_cached_dir_exists(struct sftfs_cached_endp *endp, const char *path)

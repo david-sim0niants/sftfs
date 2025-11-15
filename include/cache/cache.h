@@ -32,7 +32,7 @@ struct sftfs_cache_config {
 enum {
     SFTFS_CACHE_OK = 0,
     SFTFS_CACHE_UNEXPECTED_ENTRY,
-    SFTFS_CACHE_ERROR_MAX = SFTFS_CACHE_UNEXPECTED_ENTRY + 1,
+    SFTFS_CACHE_ERROR_MAX = SFTFS_CACHE_UNEXPECTED_ENTRY,
 };
 
 struct sftfs_cache *sftfs_cache_construct(struct sftfs_cache *cache,
@@ -46,6 +46,8 @@ sftfs_cache_entry *sftfs_cache_take(struct sftfs_cache *cache, const sftfs_cache
 int sftfs_cache_give(struct sftfs_cache *cache, sftfs_cache_entry *entry);
 
 int sftfs_cache_invalidate(struct sftfs_cache *cache, const sftfs_cache_entry *entry);
+
+int sftfs_cache_rehash_entry(struct sftfs_cache *cache, sftfs_cache_entry *entry, size_t new_hash);
 
 const sftfs_cache_entry *sftfs_cache_peek(struct sftfs_cache *cache, size_t hash);
 const sftfs_cache_entry *sftfs_cache_peek_next(const sftfs_cache_entry *entry);

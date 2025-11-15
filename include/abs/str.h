@@ -21,6 +21,8 @@ sftfs_str sftfs_str_shrink(sftfs_str str, size_t shrink_size);
 sftfs_str sftfs_str_extend_cstr(sftfs_str str, const char *cstr);
 sftfs_str sftfs_str_extend(sftfs_str str, const char *from, size_t size);
 sftfs_str sftfs_str_append(sftfs_str str, char c);
+sftfs_str sftfs_str_assign_cstr(sftfs_str str, const char *path);
+sftfs_str sftfs_str_assign(sftfs_str str, const char *path, size_t size);
 
 static inline size_t sftfs_str_size(sftfs_str_ro str)
 {

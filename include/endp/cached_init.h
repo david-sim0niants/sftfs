@@ -1,9 +1,11 @@
 #pragma once
 
 #include "defs.h"
+#include "abs/htable.h"
 #include "cache/cache.h"
 
 struct sftfs_cached_endp {
+    sftfs_htable handle_path_map;
     struct sftfs_cache attr_cache;
     struct sftfs_cache dir_cache;
     char base_endp[0];

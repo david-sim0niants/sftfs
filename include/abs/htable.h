@@ -48,8 +48,8 @@ static inline void sftfs_htable_find_and_remove(sftfs_htable_ptr table, sftfs_ht
     sftfs_htable_remove(table, sftfs_htable_find_entry_link(*table, entry));
 }
 
-sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table, size_t new_hash,
-        sftfs_htable_entry_link entry_link);
+sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table,
+        sftfs_htable_entry_link entry_link, size_t new_hash);
 
 size_t sftfs_htable_nr_buckets(sftfs_htable_ro table);
 size_t sftfs_htable_nr_entries(sftfs_htable_ro table);

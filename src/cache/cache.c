@@ -31,6 +31,11 @@ static inline sftfs_cache_entry *from_htable_entry(sftfs_htable_entry entry)
     return (sftfs_cache_entry *)sftfs_htable_entry_data(entry);
 }
 
+static inline const sftfs_cache_entry *from_htable_entry_ro(sftfs_htable_entry_ro entry)
+{
+    return (const sftfs_cache_entry *)sftfs_htable_entry_data_ro(entry);
+}
+
 static inline sftfs_htable_entry to_htable_entry(sftfs_cache_entry *entry)
 {
     return (sftfs_htable_entry)entry->node.data;
@@ -141,18 +146,30 @@ int sftfs_cache_invalidate(struct sftfs_cache *cache, const sftfs_cache_entry *e
     return rc;
 }
 
+int sftfs_cache_rehash_entry(struct sftfs_cache *cache, sftfs_cache_entry *entry, size_t new_hash)
+{
+    sftfs_htable_entry_link entry_link =
+        sftfs_htable_find_entry_link(cache->table, to_htable_entry(entry));
+
+    if (! entry_link || !*entry_link)
+        return SFTFS_CACHE_UNEXPECTED_ENTRY;
+
+    sftfs_htable_rehash_entry(&cache->table, entry_link, new_hash);
+    return SFTFS_CACHE_OK;
+}
+
 static inline bool maybe_unlisted_entry(const sftfs_cache_entry *entry)
 {
     return entry->node.prev == NULL && entry->node.next == NULL;
 }
 
-static sftfs_cache_entry *find_listed_entry(
+static const sftfs_cache_entry *find_listed_entry(
         struct sftfs_cache *cache,
         sftfs_htable_entry_link_ro entry_link)
 {
     // if cache is NULL, assume a listed entry was already found and now looking for another one
     while (entry_link && *entry_link) {
-        sftfs_cache_entry *entry = from_htable_entry(*entry_link);
+        const sftfs_cache_entry *entry = from_htable_entry_ro(*entry_link);
         if ((cache && ! unlisted_entry(cache, entry)) || ! maybe_unlisted_entry(entry))
             return entry;
         entry_link = sftfs_htable_lookup_next_ro(*entry_link);
@@ -182,7 +199,7 @@ bool sftfs_cache_contains_unlisted(const struct sftfs_cache *cache, const sftfs_
 {
     sftfs_htable_entry_link_ro entry_link =
         sftfs_htable_find_entry_link_ro(cache->table, to_htable_entry_ro(entry));
-    return entry_link && *entry_link && unlisted_entry(cache, from_htable_entry(*entry_link));
+    return entry_link && *entry_link && unlisted_entry(cache, from_htable_entry_ro(*entry_link));
 }
 
 static void call_on_evict_of_all_entries(struct sftfs_cache *cache)

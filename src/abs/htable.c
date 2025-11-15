@@ -281,8 +281,8 @@ void sftfs_htable_clear(sftfs_htable_ptr table)
     (*table)->nr_entries = 0;
 }
 
-sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table, size_t new_hash,
-        sftfs_htable_entry_link entry_link)
+sftfs_htable_entry_link sftfs_htable_rehash_entry(sftfs_htable_ptr table,
+        sftfs_htable_entry_link entry_link, size_t new_hash)
 {
     sftfs_htable_entry entry = extract_entry(*table, entry_link);
     assert(entry);

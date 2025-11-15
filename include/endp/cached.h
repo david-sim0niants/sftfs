@@ -18,6 +18,10 @@ static inline struct sftfs_cached_endp *sftfs_cached_get(sftfs_endp endp)
 void sftfs_cached_inval_all(struct sftfs_cached_endp *endp, const char *path);
 void sftfs_cached_inval_all_dir(struct sftfs_cached_endp *endp, const char *path);
 
+const char *sftfs_cached_get_handled_path(struct sftfs_cached_endp *endp, uintptr_t handle);
+void sftfs_cached_handle_path(struct sftfs_cached_endp *endp, uintptr_t handle, const char *path);
+void sftfs_cached_unhandle_path(struct sftfs_cached_endp *endp, uintptr_t handle);
+
 bool sftfs_cached_fetch_attr(struct sftfs_cached_endp *endp, const char *path, struct stat *attr);
 bool sftfs_cached_store_attr(struct sftfs_cached_endp *endp, const char *path, const struct stat *attr);
 void sftfs_cached_inval_attr(struct sftfs_cached_endp *endp, const char *path);
@@ -84,6 +88,20 @@ int sftfs_cached_symlink(sftfs_endp endp, const char *target, const char *linkpa
 }
 #undef SFTFS_ENDP_symlink
 #define SFTFS_ENDP_symlink sftfs_cached_symlink
+
+void sftfs_cached_rename_all(struct sftfs_cached_endp *endp, const char *oldpath, const char *newpath);
+
+static inline
+int sftfs_cached_rename(sftfs_endp endp, const char *oldpath, const char *newpath, unsigned int flags)
+{
+    SFTFS_TRACE_FUNC
+    int rc = SFTFS_ENDP_rename(endp, oldpath, newpath, flags);
+    if (rc == 0)
+        sftfs_cached_rename_all(sftfs_cached_get(endp), oldpath, newpath);
+    return rc;
+}
+#undef SFTFS_ENDP_rename
+#define SFTFS_ENDP_rename sftfs_cached_rename
 
 static inline
 int sftfs_cached_chmod(sftfs_endp endp, const char *path, mode_t mode)
@@ -187,6 +205,43 @@ int sftfs_cached_closedir(sftfs_endp endp, sftfs_endp_dir dir)
 
 #undef SFTFS_ENDP_closedir
 #define SFTFS_ENDP_closedir sftfs_cached_closedir
+
+static inline
+int sftfs_cached_open(sftfs_endp endp, sftfs_endp_file *file, const char *path, int access_flags)
+{
+    SFTFS_TRACE_FUNC
+    int rc = SFTFS_ENDP_open(endp, file, path, access_flags);
+    if (rc == 0)
+        sftfs_cached_handle_path(sftfs_cached_get(endp), file->handle, path);
+    return rc;
+}
+#undef SFTFS_ENDP_open
+#define SFTFS_ENDP_open sftfs_cached_open
+
+static inline
+int sftfs_cached_write(sftfs_endp endp, sftfs_endp_file file, const char *buf, size_t size, off_t off)
+{
+    SFTFS_TRACE_FUNC
+    int rc = SFTFS_ENDP_write(endp, file ,buf, size, off);
+    if (rc >= 0) {
+        const char *path = sftfs_cached_get_handled_path(sftfs_cached_get(endp), file.handle);
+        if (path)
+            sftfs_cached_inval_attr(sftfs_cached_get(endp), path);
+    }
+    return rc;
+}
+#undef SFTFS_ENDP_write
+#define SFTFS_ENDP_write sftfs_cached_write
+
+static inline
+int sftfs_cached_close(sftfs_endp endp, sftfs_endp_file file)
+{
+    SFTFS_TRACE_FUNC
+    sftfs_cached_unhandle_path(sftfs_cached_get(endp), file.handle);
+    return SFTFS_ENDP_close(endp, file);
+}
+#undef SFTFS_ENDP_close
+#define SFTFS_ENDP_close sftfs_cached_close
 
 static inline
 int sftfs_cached_create(sftfs_endp endp, const char *path, mode_t mode, sftfs_endp_file *file)

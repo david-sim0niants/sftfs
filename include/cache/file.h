@@ -11,7 +11,9 @@ struct sftfs_cache_file_config {
 enum {
     SFTFS_CACHE_FILE_OK = 0,
     SFTFS_CACHE_FILE_PATH_MISMATCH = SFTFS_CACHE_ERROR_MAX + 1,
-    SFTFS_CACHE_FILE_ERROR_MAX = SFTFS_CACHE_FILE_PATH_MISMATCH + 1,
+    SFTFS_CACHE_FILE_DOES_NOT_EXIST = SFTFS_CACHE_FILE_PATH_MISMATCH,
+    SFTFS_CACHE_FILE_RENAME_FAILED = SFTFS_CACHE_FILE_DOES_NOT_EXIST,
+    SFTFS_CACHE_FILE_ERROR_MAX,
 };
 
 struct sftfs_cache *sftfs_cache_file_construct(
@@ -23,3 +25,4 @@ int sftfs_cache_give_file(struct sftfs_cache *cache, const char *path, void *dat
 int sftfs_cache_drop_file(struct sftfs_cache *cache, const char *path, void *data);
 const void *sftfs_cache_peek_file(struct sftfs_cache *cache, const char *path);
 int sftfs_cache_invalidate_file(struct sftfs_cache *cache, const char *path);
+int sftfs_cache_rename_file(struct sftfs_cache *cache, const char *oldpath, const char *newpath);

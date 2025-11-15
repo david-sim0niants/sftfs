@@ -161,3 +161,23 @@ int sftfs_cache_invalidate_file(struct sftfs_cache *cache, const char *path)
     const sftfs_cache_entry *entry = find_entry(cache, path);
     return entry ? sftfs_cache_invalidate(cache, entry) : SFTFS_CACHE_FILE_OK;
 }
+
+int sftfs_cache_rename_file(struct sftfs_cache *cache, const char *oldpath, const char *newpath)
+{
+    const sftfs_cache_entry *entry_ro = find_entry(cache, oldpath);
+    if (! entry_ro)
+        return SFTFS_CACHE_FILE_DOES_NOT_EXIST;
+    sftfs_cache_entry *entry = sftfs_cache_take(cache, entry_ro);
+    if (! entry)
+        return SFTFS_CACHE_FILE_DOES_NOT_EXIST;
+
+    sftfs_str newpath_str = sftfs_str_assign_cstr(view_file(entry)->path, newpath);
+    if (! newpath_str)
+        return SFTFS_CACHE_FILE_RENAME_FAILED;
+    view_file(entry)->path = newpath_str;
+
+    int rc = sftfs_cache_rehash_entry(cache, entry, fnv1a_hash(sftfs_str_c(newpath_str)));
+    if (rc == SFTFS_CACHE_OK)
+        rc = sftfs_cache_give(cache, entry);
+    return rc;
+}

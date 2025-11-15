@@ -52,6 +52,14 @@ sftfs_str sftfs_str_resize(sftfs_str str, size_t size)
     return str;
 }
 
+sftfs_str sftfs_str_shrink(sftfs_str str, size_t shrink_size)
+{
+    if (shrink_size > str->size)
+        return NULL;
+    else
+        return sftfs_str_resize(str, str->size - shrink_size);
+}
+
 sftfs_str sftfs_str_extend_cstr(sftfs_str str, const char *cstr)
 {
     return sftfs_str_extend(str, cstr, strlen(cstr));
@@ -86,10 +94,17 @@ sftfs_str sftfs_str_append(sftfs_str str, char c)
     return str;
 }
 
-sftfs_str sftfs_str_shrink(sftfs_str str, size_t shrink_size)
+sftfs_str sftfs_str_assign_cstr(sftfs_str str, const char *path)
 {
-    if (shrink_size > str->size)
-        return NULL;
-    else
-        return sftfs_str_resize(str, str->size - shrink_size);
+    return sftfs_str_assign(str, path, strlen(path));
+}
+
+sftfs_str sftfs_str_assign(sftfs_str str, const char *path, size_t size)
+{
+    str = sftfs_str_resize(str, size);
+    if (str) {
+        memcpy(&str->c, path, size);
+        null_term(str);
+    }
+    return str;
 }
