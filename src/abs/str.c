@@ -94,16 +94,16 @@ sftfs_str sftfs_str_append(sftfs_str str, char c)
     return str;
 }
 
-sftfs_str sftfs_str_assign_cstr(sftfs_str str, const char *path)
+sftfs_str sftfs_str_assign_cstr(sftfs_str str, const char *cstr)
 {
-    return sftfs_str_assign(str, path, strlen(path));
+    return sftfs_str_assign(str, cstr, strlen(cstr));
 }
 
-sftfs_str sftfs_str_assign(sftfs_str str, const char *path, size_t size)
+sftfs_str sftfs_str_assign(sftfs_str str, const char *from, size_t size)
 {
     str = sftfs_str_resize(str, size);
     if (str) {
-        memcpy(&str->c, path, size);
+        memcpy(&str->c, from, size);
         null_term(str);
     }
     return str;

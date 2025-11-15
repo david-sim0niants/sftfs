@@ -15,7 +15,7 @@ struct sftfs_cache_dir_config {
 };
 
 enum {
-    SFTFS_CACHE_DIR_OK,
+    SFTFS_CACHE_DIR_OK = SFTFS_CACHE_FILE_OK,
     SFTFS_CACHE_DIR_ADD_ENTRY_FAILED = SFTFS_CACHE_FILE_ERROR_MAX + 1,
 };
 

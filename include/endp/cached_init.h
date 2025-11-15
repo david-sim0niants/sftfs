@@ -5,9 +5,10 @@
 #include "cache/cache.h"
 
 struct sftfs_cached_endp {
-    sftfs_htable handle_path_map;
     struct sftfs_cache attr_cache;
     struct sftfs_cache dir_cache;
+    struct sftfs_cache symlink_cache;
+    sftfs_htable handle_path_map;
     char base_endp[0];
 };
 
@@ -15,6 +16,7 @@ struct sftfs_cached_params {
     sftfs_cache_clock_t clock;
     sftfs_cache_time_t attr_ttl;
     sftfs_cache_time_t dir_ttl;
+    sftfs_cache_time_t symlink_ttl;
 };
 
 sftfs_endp sftfs_cached_init(size_t base_endp_size, struct sftfs_cached_params *params);

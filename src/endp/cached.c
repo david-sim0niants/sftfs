@@ -4,6 +4,7 @@
 
 #include "cache/attr.h"
 #include "cache/dir.h"
+#include "cache/symlink.h"
 
 #include "func_trace.h"
 #include "logging.h"
@@ -56,6 +57,15 @@ sftfs_endp sftfs_cached_construct(struct sftfs_cached_endp *handle, struct sftfs
     if (NULL == sftfs_cache_dir_construct(&handle->dir_cache, &dir_config))
         goto dir_cache_construct_failed;
 
+    struct sftfs_cache_symlink_config symlink_config = {
+        .list = {
+            params->clock,
+            params->symlink_ttl,
+        },
+    };
+    if (NULL == sftfs_cache_symlink_construct(&handle->symlink_cache, &symlink_config))
+        goto symlink_cache_construct_failed;
+
     handle->handle_path_map = sftfs_htable_create(0);
     if (NULL == handle->handle_path_map)
         goto handle_path_map_create_failed;
@@ -63,6 +73,8 @@ sftfs_endp sftfs_cached_construct(struct sftfs_cached_endp *handle, struct sftfs
     return handle->base_endp;
 
 handle_path_map_create_failed:
+    sftfs_cache_symlink_destruct(&handle->symlink_cache);
+symlink_cache_construct_failed:
     sftfs_cache_dir_destruct(&handle->dir_cache);
 dir_cache_construct_failed:
     sftfs_cache_attr_destruct(&handle->attr_cache);
@@ -73,6 +85,7 @@ attr_cache_construct_failed:
 void sftfs_cached_destruct(sftfs_endp endp)
 {
     sftfs_htable_delete(get_cached(endp)->handle_path_map);
+    sftfs_cache_symlink_destruct(&get_cached(endp)->symlink_cache);
     sftfs_cache_dir_destruct(&get_cached(endp)->dir_cache);
     sftfs_cache_attr_destruct(&get_cached(endp)->attr_cache);
 }
@@ -82,6 +95,7 @@ void sftfs_cached_inval_all(struct sftfs_cached_endp *endp, const char *path)
     SFTFS_TRACE_FUNC
     sftfs_cache_invalidate_attr(&endp->attr_cache, path);
     sftfs_cache_invalidate_dir(&endp->dir_cache, path);
+    sftfs_cache_invalidate_symlink(&endp->symlink_cache, path);
 }
 
 static inline const char *find_last_seperator(const char *path)
@@ -131,27 +145,53 @@ bool sftfs_cached_fetch_attr(struct sftfs_cached_endp *endp, const char *path, s
     SFTFS_TRACE_FUNC
     bool hit = sftfs_cache_get_attr(&endp->attr_cache, path, attr);
     if (hit)
-        sftfs_debug("Cache HIT: attribute path: %s\n", path);
+        sftfs_debug("Cache HIT: attribute path: '%s'\n", path);
     else
-        sftfs_debug("Cache MISS: attribute path: %s\n", path);
+        sftfs_debug("Cache MISS: attribute path: '%s'\n", path);
     return hit;
 }
 
 bool sftfs_cached_store_attr(struct sftfs_cached_endp *endp, const char *path, const struct stat *attr)
 {
     SFTFS_TRACE_FUNC
+
     int rc = sftfs_cache_put_attr(&endp->attr_cache, path, attr);
-    sftfs_debug("Cache PUT: attribute path: %s\n", path);
     if (rc != SFTFS_CACHE_ATTR_OK)
-        sftfs_error("Failed to cache attribute for path %s, sftfs_cache_put_attr(...) failed\n", path);
+        sftfs_error("Failed to cache attribute for path '%s'\n", path);
+
+    sftfs_debug("Cache PUT: attribute path: %s\n", path);
     return rc == 0;
 }
 
 void sftfs_cached_inval_attr(struct sftfs_cached_endp *endp, const char *path)
 {
     SFTFS_TRACE_FUNC
-    sftfs_debug("Cache INVALIDATE: attribute path: %s\n", path);
+    sftfs_debug("Cache INVALIDATE: attribute path: '%s'\n", path);
     sftfs_cache_invalidate_attr(&endp->attr_cache, path);
+}
+
+bool sftfs_cached_fetch_symlink(struct sftfs_cached_endp *endp, const char *path,
+        char *buffer, size_t buffer_size)
+{
+    SFTFS_TRACE_FUNC
+    bool hit = sftfs_cache_get_symlink(&endp->symlink_cache, path, buffer, buffer_size);
+    if (hit)
+        sftfs_debug("Cache HIT: symlink of '%s' is '%s'\n", path, buffer);
+    else
+        sftfs_debug("Cache MISS: symlink of '%s' was not cached\n", path);
+    return hit;
+}
+
+bool sftfs_cached_store_symlink(struct sftfs_cached_endp *endp, const char *path, const char *symlink)
+{
+    SFTFS_TRACE_FUNC
+    int rc = sftfs_cache_put_symlink(&endp->symlink_cache, path, symlink);
+
+    if (rc != SFTFS_CACHE_SYMLINK_OK)
+        sftfs_error("Failed to cache symlink of path '%s' with symlink '%s'\n", path, symlink);
+
+    sftfs_debug("Cache PUT: symlink of '%s' is '%s'\n", path, symlink);
+    return rc == 0;
 }
 
 void sftfs_cached_rename_all(struct sftfs_cached_endp *endp, const char *oldpath, const char *newpath)
@@ -159,6 +199,7 @@ void sftfs_cached_rename_all(struct sftfs_cached_endp *endp, const char *oldpath
     SFTFS_TRACE_FUNC
     sftfs_cache_rename_file(&endp->attr_cache, oldpath, newpath);
     sftfs_cache_rename_file(&endp->dir_cache, oldpath, newpath);
+    sftfs_cache_rename_file(&endp->symlink_cache, oldpath, newpath);
 }
 
 bool sftfs_cached_dir_exists(struct sftfs_cached_endp *endp, const char *path)

@@ -41,6 +41,25 @@ int sftfs_cached_getattr(sftfs_endp endp, const char *path, sftfs_endp_file file
 #undef SFTFS_ENDP_getattr
 #define SFTFS_ENDP_getattr sftfs_cached_getattr
 
+bool sftfs_cached_fetch_symlink(struct sftfs_cached_endp *endp, const char *path,
+        char *buffer, size_t buffer_size);
+bool sftfs_cached_store_symlink(struct sftfs_cached_endp *endp, const char *path, const char *symlink);
+
+static inline
+int sftfs_cached_readlink(sftfs_endp endp, const char *path, char *buf, size_t bufsiz)
+{
+    SFTFS_TRACE_FUNC
+    assert(path[0] == '/');
+    if (sftfs_cached_fetch_symlink(sftfs_cached_get(endp), path, buf, bufsiz))
+        return 0;
+    int rc = SFTFS_ENDP_readlink(endp, path, buf, bufsiz);
+    if (rc == 0)
+        sftfs_cached_store_symlink(sftfs_cached_get(endp), path, buf);
+    return rc;
+}
+#undef SFTFS_ENDP_readlink
+#define SFTFS_ENDP_readlink sftfs_cached_readlink
+
 static inline
 int sftfs_cached_mkdir(sftfs_endp endp, const char *path, mode_t mode)
 {

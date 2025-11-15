@@ -227,9 +227,8 @@ int sftfs_sftp_readlink(sftfs_endp endp, const char *path, char *buf, size_t buf
     if (NULL == target)
         return ret_sftp_err(sftp);
 
-    size_t copy_size = strnlen(target, bufsiz - 1);
-    strncpy(buf, target, copy_size);
-    buf[copy_size] = '\0';
+    strncpy(buf, target, bufsiz - 1);
+    buf[bufsiz - 1] = '\0';
 
     ssh_string_free_char(target);
 

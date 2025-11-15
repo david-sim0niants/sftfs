@@ -10,7 +10,7 @@ struct sftfs_cache_attr_config {
 };
 
 enum {
-    SFTFS_CACHE_ATTR_OK = 0,
+    SFTFS_CACHE_ATTR_OK = SFTFS_CACHE_FILE_OK,
     SFTFS_CACHE_ATTR_PUT_FAILED = SFTFS_CACHE_FILE_ERROR_MAX + 1,
 };
 

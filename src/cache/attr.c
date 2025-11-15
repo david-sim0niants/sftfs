@@ -29,10 +29,8 @@ bool sftfs_cache_get_attr(struct sftfs_cache *cache, const char *path, struct st
 int sftfs_cache_put_attr(struct sftfs_cache *cache, const char *path, const struct stat *attr)
 {
     void *data = sftfs_cache_take_file(cache, path, NULL);
-    if (! data) {
-        sftfs_cache_drop_file(cache, path, data);
+    if (! data)
         return SFTFS_CACHE_ATTR_PUT_FAILED;
-    }
     memcpy(data, attr, sizeof(*attr));
     return sftfs_cache_give_file(cache, path, data);
 }
